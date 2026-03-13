@@ -117,6 +117,7 @@ export const getCarById = async (id) => {
 };
 
 export const createCar = async (car, equipment) => {
+  // Insert car
   const { data: newCar, error: carError } = await supabase
     .from('cars')
     .insert([car])
@@ -124,6 +125,7 @@ export const createCar = async (car, equipment) => {
     .single();
   if (carError) throw carError;
 
+  // Insert equipment
   if (equipment) {
     const { error: eqError } = await supabase
       .from('car_equipment')
@@ -143,32 +145,20 @@ export const updateCar = async (id, carUpdates, equipmentUpdates) => {
     .single();
   if (error) throw error;
 
-if (equipmentUpdates) {
-  const { error: eqError } = await supabase
-    .from('car_equipment')
-    .upsert(
-      { car_id: id, ...equipmentUpdates },
-      { onConflict: 'car_id', ignoreDuplicates: false }
-    );
-  if (eqError) throw eqError;
-}
+  if (equipmentUpdates) {
+    // Strip any non-equipment columns (id, car_id) that may have come from a Supabase join
+    const { id: _id, car_id: _cid, ...cleanEq } = equipmentUpdates;
+    const { error: eqError } = await supabase
+      .from('car_equipment')
+      .update(cleanEq)
+      .eq('car_id', id);
+    if (eqError) throw eqError;
+  }
 
   return data;
 };
 
 export const deleteCar = async (id) => {
-  // Delete equipment first (foreign key)
-  await supabase.from('car_equipment').delete().eq('car_id', id);
-
-  // Delete photos from storage
-  const { data: files } = await supabase.storage
-    .from('car-photos')
-    .list(id.toString());
-  if (files && files.length > 0) {
-    const paths = files.map(f => `${id}/${f.name}`);
-    await supabase.storage.from('car-photos').remove(paths);
-  }
-
   const { error } = await supabase
     .from('cars')
     .delete()
@@ -181,18 +171,12 @@ export const deleteCar = async (id) => {
 // ============================================================
 
 export const uploadCarPhoto = async (carId, file) => {
-  const fileExt = file.name.split('.').pop().toLowerCase();
-  // unique filename using timestamp + random suffix to avoid collisions
-  const fileName = `${carId}/${Date.now()}_${Math.random().toString(36).slice(2,7)}.${fileExt}`;
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${carId}/${Date.now()}.${fileExt}`;
 
   const { error: uploadError } = await supabase.storage
     .from('car-photos')
-    .upload(fileName, file, {
-      cacheControl: '3600',
-      upsert: false,
-      contentType: file.type,
-    });
-
+    .upload(fileName, file);
   if (uploadError) throw uploadError;
 
   const { data } = supabase.storage
@@ -203,17 +187,12 @@ export const uploadCarPhoto = async (carId, file) => {
 };
 
 export const uploadDealerLogo = async (dealerId, file) => {
-  const fileExt = file.name.split('.').pop().toLowerCase();
+  const fileExt = file.name.split('.').pop();
   const fileName = `${dealerId}/logo.${fileExt}`;
 
   const { error: uploadError } = await supabase.storage
     .from('dealer-logos')
-    .upload(fileName, file, {
-      cacheControl: '3600',
-      upsert: true,
-      contentType: file.type,
-    });
-
+    .upload(fileName, file, { upsert: true });
   if (uploadError) throw uploadError;
 
   const { data } = supabase.storage
