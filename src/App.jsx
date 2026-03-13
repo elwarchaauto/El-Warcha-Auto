@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { getDealers, getCars, getSettings, createDealer, updateDealer, deleteDealer, createCar, updateCar, updateSettings, deleteCar, uploadCarPhoto } from "./lib/db";
-import { fetchLiveRates } from "./lib/priceFormula";
 
 const EQUIPMENT_LABELS = {
   cd_dvd:"CD/DVD", sun_roof:"Sun Roof", leather_seat:"Leather Seat",
@@ -49,14 +48,31 @@ const BRAND_NAMES = ALL_BRANDS.map(b=>b.n);
 
 
 const EMPTY_FILTERS = {brand:"",fuel:"",condition:"",status:"",color:"",body_type:"",yearMin:"",yearMax:"",mileageMax:300000,priceMax:500000,equipment:{}};
-const EMPTY_CAR     = {dealer_id:"",brand:"",model:"",year:"",trim:"",body_type:"",condition:"used",status:"available",mileage:"",origin:"imported",price_cny:"",negotiable:false,fuel_type:"",transmission:"",engine_size:"",color:"",doors:"",description:""};
+const EMPTY_CAR     = {dealer_id:"",brand:"",model:"",year:"",trim:"",body_type:"",condition:"used",status:"available",mileage:"",origin:"imported",price_cny:"",price_usd:"",price_currency:"CNY",negotiable:false,fuel_type:"",transmission:"",engine_size:"",color:"",doors:"",description:""};
 const EMPTY_EQ      = Object.fromEntries(Object.keys(EQUIPMENT_LABELS).map(k=>[k,false]));
 
 const fmt    = n => n!=null ? new Intl.NumberFormat("fr-DZ").format(Math.round(n)) : "—";
 const fmtCNY = n => n ? "¥"+new Intl.NumberFormat("zh-CN").format(n) : "—";
-const calcDZD = (cny, s) => {
-  if (!cny || !s?.cny_usd_rate || !s?.usd_dzd_rate) return null;
-  return Math.round(((cny * s.cny_usd_rate) + (s.shipment_fee_usd||0)) * s.usd_dzd_rate);
+// Calculate DZD from either CNY or USD source price
+const calcDZD = (cny, s, usd=null, currency='CNY') => {
+  if (!s?.usd_dzd_rate) return null;
+  let priceUSD;
+  if (currency === 'USD' && usd) {
+    priceUSD = parseFloat(usd);
+  } else if (cny && s?.cny_usd_rate) {
+    priceUSD = parseFloat(cny) * parseFloat(s.cny_usd_rate);
+  } else {
+    return null;
+  }
+  if (!priceUSD) return null;
+  return Math.round((priceUSD + (parseFloat(s.shipment_fee_usd)||0)) * parseFloat(s.usd_dzd_rate));
+};
+
+// Get the display price in USD for a car
+const getUSD = (car, s) => {
+  if (car.price_currency === 'USD' && car.price_usd) return parseFloat(car.price_usd);
+  if (car.price_cny && s?.cny_usd_rate) return parseFloat(car.price_cny) * parseFloat(s.cny_usd_rate);
+  return null;
 };
 
 const G = `
@@ -159,7 +175,7 @@ const Navbar = ({page, setPage, search, setSearch}) => (
     <div className="nav-top" style={{background:"#1c1c1c",padding:"4px 24px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <span style={{color:"#888",fontSize:11,fontWeight:600}}>📍 Algérie — Import direct Chine</span>
       <div style={{display:"flex",gap:20}}>
-        {[{id:"home",l:"🚗 Voitures"},{id:"dealers",l:"🏢 Concessionnaires"},{id:"settings",l:"⚙️ Paramètres"}].map(item=>(
+        {[{id:"home",l:"🚗 Voitures"},{id:"dealers",l:"🏢 Concessionnaires"},{id:"export",l:"📄 Export PDF"},{id:"settings",l:"⚙️ Paramètres"}].map(item=>(
           <button key={item.id} onClick={()=>setPage(item.id)} style={{background:"none",color:page===item.id?"#e8001d":"#999",fontSize:11,fontWeight:700,padding:"2px 0",borderBottom:page===item.id?"1.5px solid #e8001d":"1.5px solid transparent"}}>{item.l}</button>
         ))}
       </div>
@@ -180,7 +196,7 @@ const Navbar = ({page, setPage, search, setSearch}) => (
       </div>
       <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
         <div className="nav-top" style={{display:"flex",gap:4}}>
-          {[{id:"home",l:"🚗"},{id:"dealers",l:"🏢"},{id:"settings",l:"⚙️"}].map(item=>(
+          {[{id:"home",l:"🚗"},{id:"dealers",l:"🏢"},{id:"export",l:"📄"},{id:"settings",l:"⚙️"}].map(item=>(
             <button key={item.id} onClick={()=>setPage(item.id)} style={{background:page===item.id?"#e8001d":"#f2f2f2",color:page===item.id?"#fff":"#555",border:"none",borderRadius:6,padding:"6px 9px",fontSize:15}}>{item.l}</button>
           ))}
         </div>
@@ -308,7 +324,7 @@ const SearchPanel = ({filters, setFilters}) => {
 };
 
 const CarCard = ({car, settings, onClick}) => {
-  const dzd    = calcDZD(car.price_cny, settings);
+  const dzd    = calcDZD(car.price_cny, settings, car.price_usd, car.price_currency);
   const photos = car.photos||[];
   const eq     = car.car_equipment?.[0]||{};
   const eqList = Object.entries(EQUIPMENT_LABELS).filter(([k])=>eq[k]).map(([,v])=>v);
@@ -361,7 +377,7 @@ const CarCard = ({car, settings, onClick}) => {
       </div>
       <div className="car-card-price" style={{width:148,flexShrink:0,borderLeft:"1px solid #e5e5e5",padding:"12px",display:"flex",flexDirection:"column",alignItems:"flex-end",justifyContent:"space-between",background:"#fafafa"}}>
         <div style={{textAlign:"right"}}>
-          <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:21,color:"#e8001d",lineHeight:1}}>{fmtCNY(car.price_cny)}</div>
+          <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:21,color:"#e8001d",lineHeight:1}}>{car.price_currency==='USD'?('$'+new Intl.NumberFormat('fr-DZ').format(Math.round(car.price_usd||0))):fmtCNY(car.price_cny)}</div>
           {dzd&&(
             <div style={{marginTop:5,padding:"4px 8px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:5}}>
               <div style={{fontSize:8,color:"#92400e",fontWeight:700}}>≈ DZD</div>
@@ -480,12 +496,35 @@ const Sec = ({title,children}) => (
 const CarForm = ({initial, initialEq, dealers, settings, onSubmit, onCancel, submitLabel, loading}) => {
   const [form, setForm] = useState(initial);
   const [eq,   setEq]   = useState(initialEq);
+  const [priceCur, setPriceCur] = useState('CNY');
   // Each entry: {src: string (dataURL or http URL), file: File|null}
   const [photos, setPhotos] = useState(
     (initial._existingPhotos||[]).map(url=>({src:url, file:null}))
   );
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}));
-  const previewDZD = calcDZD(parseFloat(form.price_cny)||0, settings);
+
+  // Price input: CNY stores in price_cny, USD stores in price_usd
+  const handlePriceInput = e => {
+    const val = e.target.value;
+    if (priceCur === 'CNY') {
+      setForm(f => ({...f, price_cny: val, price_usd: null, price_currency: 'CNY'}));
+    } else {
+      setForm(f => ({...f, price_usd: val, price_cny: null, price_currency: 'USD'}));
+    }
+  };
+  const priceInputVal = priceCur === 'CNY' ? (form.price_cny||'') : (form.price_usd||'');
+
+  // Live DZD preview
+  const previewDZD = priceCur === 'CNY'
+    ? calcDZD(parseFloat(form.price_cny)||0, settings)
+    : calcDZD(null, settings, parseFloat(form.price_usd)||0, 'USD');
+
+  // Show equivalent in the other currency
+  const priceEquiv = priceCur === 'CNY' && form.price_cny && settings?.cny_usd_rate
+    ? `≈ $${(parseFloat(form.price_cny) * parseFloat(settings.cny_usd_rate)).toFixed(0)} USD`
+    : priceCur === 'USD' && form.price_usd && settings?.cny_usd_rate
+    ? `≈ ¥${new Intl.NumberFormat("zh-CN").format(Math.round(parseFloat(form.price_usd) / parseFloat(settings.cny_usd_rate)))} CNY`
+    : null;
 
   const addPhoto = (file, dataUrl) => setPhotos(p=>[...p,{src:dataUrl, file}]);
   const removePhoto = i => setPhotos(p=>p.filter((_,idx)=>idx!==i));
@@ -524,8 +563,25 @@ const CarForm = ({initial, initialEq, dealers, settings, onSubmit, onCancel, sub
         </label>
       </Sec>
       <Sec title="Prix">
-        <FF label="Prix en Yuan (CNY ¥)"><input className="f" type="number" value={form.price_cny} onChange={set("price_cny")} placeholder="150000"/></FF>
-        {previewDZD>0&&<div style={{padding:"9px 13px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontSize:12,color:"#92400e",fontWeight:700}}>Estimation DZD :</span><span style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:16,color:"#92400e"}}>{fmt(previewDZD)} DZD</span></div>}
+        <div style={{display:"flex",gap:0,borderRadius:8,overflow:"hidden",border:"1.5px solid #ddd",width:"fit-content"}}>
+          {[{v:"CNY",l:"¥ Yuan (CNY)"},{v:"USD",l:"$ Dollar (USD)"}].map(cur=>(
+            <button key={cur.v} type="button" onClick={()=>{setPriceCur(cur.v);setForm(f=>({...f,price_currency:cur.v,price_cny:null,price_usd:null}));}}
+              style={{padding:"8px 24px",fontWeight:700,fontSize:13,border:"none",background:priceCur===cur.v?"#e8001d":"#fff",color:priceCur===cur.v?"#fff":"#555",transition:"all .18s",cursor:"pointer"}}>
+              {cur.l}
+            </button>
+          ))}
+        </div>
+        <FF label={priceCur==="CNY"?"Prix en Yuan ¥":"Prix en Dollar $"}>
+          <input className="f" type="number" value={priceInputVal} onChange={handlePriceInput}
+            placeholder={priceCur==="CNY"?"ex: 150 000 ¥":"ex: 20 000 $"}/>
+        </FF>
+        {priceEquiv&&<div style={{fontSize:11,color:"#9a9a9a",fontWeight:600,marginTop:-4}}>{priceEquiv}</div>}
+        {previewDZD>0&&(
+          <div style={{padding:"9px 13px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span style={{fontSize:12,color:"#92400e",fontWeight:700}}>Estimation DZD :</span>
+            <span style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:16,color:"#92400e"}}>{fmt(previewDZD)} DZD</span>
+          </div>
+        )}
       </Sec>
       <Sec title="Technique">
         <div className="form-grid2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
@@ -565,7 +621,9 @@ const AddCarPage = ({dealers, settings, setPage, onAdd, showToast}) => {
         ...form,
         year: parseInt(form.year)||null,
         mileage: parseInt(form.mileage)||null,
-        price_cny: parseFloat(form.price_cny)||null,
+        price_cny: form.price_currency==='CNY' ? parseFloat(form.price_cny)||null : null,
+        price_usd: form.price_currency==='USD' ? parseFloat(form.price_usd)||null : null,
+        price_currency: form.price_currency||'CNY',
         doors: parseInt(form.doors)||null,
         photos: [],
       };
@@ -598,7 +656,7 @@ const CarDetailPage = ({car, settings, setPage, onDelete, onUpdate, showToast, d
   const [activePhoto, setActivePhoto] = useState(0);
   const [editing, setEditing] = useState(false);
   if (editing) return <EditCarPage car={car} settings={settings} setPage={setPage} dealers={dealers} onUpdate={u=>{onUpdate(u);setEditing(false);}} showToast={showToast} onCancel={()=>setEditing(false)}/>;
-  const dealer=car.dealers; const eq=car.car_equipment?.[0]||{}; const dzd=calcDZD(car.price_cny,settings); const photos=car.photos||[];
+  const dealer=car.dealers; const eq=car.car_equipment?.[0]||{}; const dzd=calcDZD(car.price_cny,settings,car.price_usd,car.price_currency); const photos=car.photos||[];
   const specs=[{l:"Marque",v:car.brand},{l:"Modèle",v:car.model},{l:"Année",v:car.year},{l:"Version",v:car.trim},{l:"Carrosserie",v:car.body_type},{l:"Couleur",v:car.color},{l:"Origine",v:car.origin==="imported"?"Importé":"Local"},{l:"Kilométrage",v:car.mileage?fmt(car.mileage)+" km":null},{l:"Carburant",v:car.fuel_type},{l:"Transmission",v:car.transmission},{l:"Cylindrée",v:car.engine_size},{l:"Portes",v:car.doors}].filter(s=>s.v);
   return (
     <div style={{background:"#f2f2f2",minHeight:"100vh",paddingBottom:60}}>
@@ -658,7 +716,7 @@ const CarDetailPage = ({car, settings, setPage, onDelete, onUpdate, showToast, d
             </div>
             <div style={{background:"#f2f2f2",borderRadius:8,padding:"11px 14px",marginBottom:8,borderLeft:"4px solid #e8001d"}}>
               <div style={{fontSize:9,color:"#9a9a9a",fontWeight:700,letterSpacing:".1em",marginBottom:2}}>PRIX</div>
-              <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:28,color:"#e8001d",lineHeight:1}}>{fmtCNY(car.price_cny)}</div>
+              <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:28,color:"#e8001d",lineHeight:1}}>{car.price_currency==='USD'?('$ '+new Intl.NumberFormat('fr-DZ').format(Math.round(car.price_usd||0))):fmtCNY(car.price_cny)}</div>
             </div>
             {dzd&&<div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"10px 14px",marginBottom:12}}><div style={{fontSize:9,color:"#92400e",fontWeight:700,letterSpacing:".08em",marginBottom:2}}>ESTIMATION DZD</div><div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:20,color:"#92400e"}}>{fmt(dzd)} DZD</div><div style={{fontSize:9,color:"#b45309",marginTop:2}}>Transport · ${settings?.shipment_fee_usd} USD</div></div>}
             <div style={{display:"flex",gap:5,marginBottom:12,flexWrap:"wrap"}}><STag status={car.status}/><CTag condition={car.condition}/>{car.negotiable&&<span className="tag tgr">🏷️ Négociable</span>}</div>
@@ -686,6 +744,7 @@ const EditCarPage = ({car, settings, setPage, onUpdate, showToast, onCancel, dea
   const [loading, setLoading] = useState(false);
   const initialForm = {
     _existingPhotos: car.photos||[],
+    price_usd: car.price_usd||"", price_currency: car.price_currency||"CNY",
     dealer_id: car.dealer_id||"",
     brand: car.brand||"", model: car.model||"", year: car.year||"",
     trim: car.trim||"", body_type: car.body_type||"",
@@ -705,7 +764,8 @@ const EditCarPage = ({car, settings, setPage, onUpdate, showToast, onCancel, dea
       delete data._existingPhotos;
       data.year = parseInt(data.year)||null;
       data.mileage = parseInt(data.mileage)||null;
-      data.price_cny = parseFloat(data.price_cny)||null;
+      data.price_cny = data.price_currency==='CNY' ? parseFloat(data.price_cny)||null : null;
+      data.price_usd = data.price_currency==='USD' ? parseFloat(data.price_usd)||null : null;
       data.doors = parseInt(data.doors)||null;
       // Keep existing http URLs that weren't removed, then append new uploads
       const existingUrls = allPreviews.filter(p => typeof p==="string" && p.startsWith("http"));
@@ -883,44 +943,342 @@ const EditDealerPage = ({dealer, setPage, onUpdate, showToast}) => {
   );
 };
 const SettingsPage = ({settings, setSettings, showToast}) => {
-  const [fee, setFee]=useState(settings?.shipment_fee_usd||0);
-  const [refreshing, setRef]=useState(false);
-  const [saving, setSaving]=useState(false);
-  const saveFee=async()=>{setSaving(true);try{const u=await updateSettings({shipment_fee_usd:parseFloat(fee)||0});setSettings(u);showToast("Sauvegardé !","success");}catch(e){showToast("Erreur: "+e.message,"error");}finally{setSaving(false);}};
-  const refresh=async()=>{setRef(true);try{const rates=await fetchLiveRates();if(rates){const u=await updateSettings({...rates,rates_updated_at:new Date().toISOString()});setSettings(u);showToast("Taux mis à jour !","success");}else showToast("Clé API manquante","error");}catch(e){showToast("Erreur: "+e.message,"error");}finally{setRef(false);}};
+  const [form, setForm] = useState({
+    cny_usd_rate:   settings?.cny_usd_rate   || '',
+    usd_dzd_rate:   settings?.usd_dzd_rate   || '',
+    shipment_fee_usd: settings?.shipment_fee_usd || '',
+  });
+  const [saving, setSaving] = useState(false);
+  const set = k => e => setForm(f=>({...f,[k]:e.target.value}));
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const u = await updateSettings({
+        cny_usd_rate:     parseFloat(form.cny_usd_rate)     || 0,
+        usd_dzd_rate:     parseFloat(form.usd_dzd_rate)     || 0,
+        shipment_fee_usd: parseFloat(form.shipment_fee_usd) || 0,
+        rates_updated_at: new Date().toISOString(),
+      });
+      setSettings(u);
+      showToast("Paramètres sauvegardés !","success");
+    } catch(e) { showToast("Erreur: "+e.message,"error"); }
+    finally { setSaving(false); }
+  };
+
+  const previewCNY = form.cny_usd_rate && form.usd_dzd_rate
+    ? Math.round((100000 * parseFloat(form.cny_usd_rate) + parseFloat(form.shipment_fee_usd||0)) * parseFloat(form.usd_dzd_rate))
+    : null;
+  const previewUSD = form.usd_dzd_rate
+    ? Math.round((20000 + parseFloat(form.shipment_fee_usd||0)) * parseFloat(form.usd_dzd_rate))
+    : null;
+
   return (
-    <div className="page-wrap" style={{padding:"86px 20px 60px",maxWidth:540,margin:"0 auto"}}>
+    <div className="page-wrap" style={{padding:"86px 20px 60px",maxWidth:560,margin:"0 auto"}}>
       <h1 style={{fontSize:24,fontWeight:900,marginBottom:18}}>⚙️ Paramètres</h1>
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
-        <Sec title="Frais de transport">
-          <p style={{fontSize:12,color:"#9a9a9a"}}>Montant fixe USD appliqué à tous les véhicules.</p>
-          <div style={{display:"flex",gap:8,alignItems:"flex-end"}}><div style={{flex:1}}><FF label="Frais (USD $)"><input className="f" type="number" value={fee} onChange={e=>setFee(e.target.value)}/></FF></div><button className="btn-red" onClick={saveFee} disabled={saving}>{saving?"⏳":"💾"} Sauvegarder</button></div>
-        </Sec>
-        <Sec title="Taux de change">
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <p style={{fontSize:11,color:"#9a9a9a",fontWeight:600}}>Mis à jour : {settings?.rates_updated_at?new Date(settings.rates_updated_at).toLocaleString("fr-DZ"):"Jamais"}</p>
-            <button className="btn-out" onClick={refresh} disabled={refreshing} style={{fontSize:11}}><span style={{animation:refreshing?"spin 1s linear infinite":"none",display:"inline-block"}}>⟳</span>{refreshing?" Actualisation...":" Actualiser"}</button>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-            {[{l:"CNY → USD",v:settings?.cny_usd_rate?.toFixed(6),s:"1 Yuan = X Dollar"},{l:"USD → DZD",v:settings?.usd_dzd_rate?.toFixed(4),s:"1 Dollar = X Dinar"}].map(r=>(
-              <div key={r.l} style={{background:"#f2f2f2",borderRadius:8,padding:"12px 14px",border:"1px solid #e5e5e5"}}>
-                <div style={{fontSize:9,color:"#9a9a9a",fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",marginBottom:3}}>{r.l}</div>
-                <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:22,color:"#e8001d"}}>{r.v||"—"}</div>
-                <div style={{fontSize:10,color:"#9a9a9a",marginTop:2}}>{r.s}</div>
-              </div>
-            ))}
+        <Sec title="Taux de change — saisie manuelle">
+          <p style={{fontSize:12,color:"#9a9a9a",marginBottom:4}}>Définissez vos propres taux. Ces valeurs sont utilisées pour toutes les conversions de prix.</p>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <FF label="1 Yuan (CNY) = ? Dollar (USD)">
+              <input className="f" type="number" step="0.000001" value={form.cny_usd_rate} onChange={set("cny_usd_rate")} placeholder="ex: 0.138000"/>
+            </FF>
+            <FF label="1 Dollar (USD) = ? Dinar (DZD)">
+              <input className="f" type="number" step="0.0001" value={form.usd_dzd_rate} onChange={set("usd_dzd_rate")} placeholder="ex: 134.5000"/>
+            </FF>
           </div>
         </Sec>
-        <div style={{background:"#fafafa",border:"1px solid #e5e5e5",borderRadius:12,padding:16,borderLeft:"3px solid #e8001d"}}>
-          <h3 style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:".08em",marginBottom:10}}>📐 Formule active</h3>
-          <code style={{fontSize:11,color:"#555",lineHeight:2,display:"block",background:"#fff",padding:"8px 12px",borderRadius:5,border:"1px solid #e5e5e5"}}>
-            DZD = ( (CNY × {settings?.cny_usd_rate?.toFixed(4)||"?"}) + {settings?.shipment_fee_usd||0}$ ) × {settings?.usd_dzd_rate?.toFixed(2)||"?"}
-          </code>
+        <Sec title="Frais de transport (USD)">
+          <p style={{fontSize:12,color:"#9a9a9a"}}>Montant fixe USD ajouté à chaque véhicule pour le calcul DZD.</p>
+          <FF label="Frais de transport ($)">
+            <input className="f" type="number" value={form.shipment_fee_usd} onChange={set("shipment_fee_usd")} placeholder="ex: 1200"/>
+          </FF>
+        </Sec>
+        {(previewCNY||previewUSD)&&(
+          <Sec title="Aperçu des formules">
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              {previewCNY&&(
+                <div style={{background:"#f8f8f8",borderRadius:8,padding:"12px 14px",border:"1px solid #e5e5e5"}}>
+                  <div style={{fontSize:10,color:"#9a9a9a",fontWeight:700,marginBottom:4}}>¥100 000 CNY →</div>
+                  <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:18,color:"#e8001d"}}>{fmt(previewCNY)} DZD</div>
+                  <code style={{fontSize:9,color:"#9a9a9a",display:"block",marginTop:4}}>
+                    (100K × {parseFloat(form.cny_usd_rate)||0} + {parseFloat(form.shipment_fee_usd)||0}$) × {parseFloat(form.usd_dzd_rate)||0}
+                  </code>
+                </div>
+              )}
+              {previewUSD&&(
+                <div style={{background:"#f8f8f8",borderRadius:8,padding:"12px 14px",border:"1px solid #e5e5e5"}}>
+                  <div style={{fontSize:10,color:"#9a9a9a",fontWeight:700,marginBottom:4}}>$20 000 USD →</div>
+                  <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:18,color:"#e8001d"}}>{fmt(previewUSD)} DZD</div>
+                  <code style={{fontSize:9,color:"#9a9a9a",display:"block",marginTop:4}}>
+                    (20K + {parseFloat(form.shipment_fee_usd)||0}$) × {parseFloat(form.usd_dzd_rate)||0}
+                  </code>
+                </div>
+              )}
+            </div>
+          </Sec>
+        )}
+        <button className="btn-red" onClick={save} disabled={saving} style={{padding:"12px",fontSize:14,justifyContent:"center"}}>
+          {saving?"⏳ Sauvegarde...":"💾 Sauvegarder les paramètres"}
+        </button>
+        {settings?.rates_updated_at&&(
+          <p style={{fontSize:11,color:"#9a9a9a",textAlign:"center"}}>Dernière mise à jour : {new Date(settings.rates_updated_at).toLocaleString("fr-DZ")}</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// EXPORT PAGE
+// ============================================================
+const EXPORT_FIELDS = [
+  {k:"brand",l:"Marque"},{k:"model",l:"Modèle"},{k:"year",l:"Année"},
+  {k:"trim",l:"Version"},{k:"body_type",l:"Carrosserie"},{k:"condition",l:"Condition"},
+  {k:"status",l:"Statut"},{k:"mileage",l:"Kilométrage"},{k:"origin",l:"Origine"},
+  {k:"price_cny",l:"Prix CNY"},{k:"price_usd",l:"Prix USD"},{k:"fuel_type",l:"Carburant"},
+  {k:"transmission",l:"Transmission"},{k:"engine_size",l:"Cylindrée"},
+  {k:"color",l:"Couleur"},{k:"doors",l:"Portes"},{k:"negotiable",l:"Négociable"},
+  {k:"dealers.name",l:"Concessionnaire"},
+];
+const GROUP_OPTIONS = [
+  {k:"dealers.name",l:"Concessionnaire"},
+  {k:"brand",l:"Marque"},
+  {k:"model",l:"Modèle"},
+  {k:"status",l:"Statut"},
+  {k:"condition",l:"Condition"},
+  {k:"fuel_type",l:"Carburant"},
+  {k:"body_type",l:"Carrosserie"},
+  {k:"color",l:"Couleur"},
+  {k:"origin",l:"Origine"},
+  {k:"year",l:"Année"},
+];
+const SORT_OPTIONS = [
+  {k:"price_cny",l:"Prix CNY"},{k:"price_usd",l:"Prix USD"},
+  {k:"year",l:"Année"},{k:"mileage",l:"Kilométrage"},
+  {k:"brand",l:"Marque"},{k:"model",l:"Modèle"},
+  {k:"dealers.name",l:"Concessionnaire"},
+];
+
+const getFieldVal = (car, key) => {
+  if (key === "dealers.name") return car.dealers?.name || "—";
+  const v = car[key];
+  if (v === null || v === undefined || v === "") return "—";
+  if (key === "negotiable") return v ? "Oui" : "Non";
+  if (key === "mileage" && v) return fmt(v) + " km";
+  if (key === "condition") return v === "new" ? "Neuf" : "Occasion";
+  if (key === "status") return {available:"Disponible",sold:"Vendu",reserved:"Réservé"}[v] || v;
+  if (key === "origin") return v === "imported" ? "Importé" : "Local";
+  if (key === "price_cny" && v) return "¥" + new Intl.NumberFormat("zh-CN").format(v);
+  if (key === "price_usd" && v) return "$" + new Intl.NumberFormat("fr-DZ").format(Math.round(v));
+  return String(v);
+};
+
+const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
+  const BASE_URL = window.location.origin + window.location.pathname;
+
+  // ── Filter state (same as HomePage) ──
+  const [filters, setFilters]   = useState({...EMPTY_FILTERS});
+  const [search,  setSearch2]   = useState("");
+
+  // ── Export config ──
+  const [groupBy,   setGroupBy]   = useState("dealers.name");
+  const [sortBy,    setSortBy]    = useState("price_cny");
+  const [sortDir,   setSortDir]   = useState("asc");
+  const [selFields, setSelFields] = useState(["brand","model","year","trim","status","price_cny","price_usd","dealers.name"]);
+  const [printing,  setPrinting]  = useState(false);
+
+  const toggleField = k => setSelFields(f => f.includes(k) ? f.filter(x=>x!==k) : [...f,k]);
+
+  // Apply filters (same logic as HomePage)
+  const filtered = cars.filter(c => {
+    const q = search.toLowerCase();
+    if (q && !((c.brand+" "+c.model+" "+c.year+" "+(c.trim||"")+" "+(c.dealers?.name||"")).toLowerCase().includes(q))) return false;
+    if (filters.brand     && c.brand!==filters.brand) return false;
+    if (filters.fuel      && c.fuel_type!==filters.fuel) return false;
+    if (filters.condition && c.condition!==filters.condition) return false;
+    if (filters.status    && c.status!==filters.status) return false;
+    if (filters.color     && c.color!==filters.color) return false;
+    if (filters.body_type && c.body_type!==filters.body_type) return false;
+    if (filters.yearMin   && c.year < parseInt(filters.yearMin)) return false;
+    if (filters.yearMax   && c.year > parseInt(filters.yearMax)) return false;
+    if ((filters.mileageMax||300000)<300000 && (c.mileage||0)>filters.mileageMax) return false;
+    if ((filters.priceMax||500000)<500000   && (c.price_cny||0)>filters.priceMax) return false;
+    if (filters.equipment) for (const [k,v] of Object.entries(filters.equipment)) if (v && !c.car_equipment?.[0]?.[k]) return false;
+    return true;
+  });
+
+  // Sort helper
+  const getSortVal = (car, key) => {
+    if (key === "dealers.name") return car.dealers?.name?.toLowerCase() || "";
+    const v = car[key];
+    return typeof v === "string" ? v.toLowerCase() : (v ?? 0);
+  };
+
+  // Group + sort
+  const grouped = React.useMemo(() => {
+    const sorted = [...filtered].sort((a,b) => {
+      const va = getSortVal(a, sortBy), vb = getSortVal(b, sortBy);
+      if (va < vb) return sortDir === "asc" ? -1 : 1;
+      if (va > vb) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+    const groups = {};
+    sorted.forEach(car => {
+      const gKey = getFieldVal(car, groupBy) || "Autres";
+      if (!groups[gKey]) groups[gKey] = [];
+      groups[gKey].push(car);
+    });
+    return Object.entries(groups).sort(([a],[b])=>a.localeCompare(b));
+  }, [filtered, groupBy, sortBy, sortDir]);
+
+  const totalCars = filtered.length;
+
+  // ── PDF Generation ──
+  const exportPDF = () => {
+    setPrinting(true);
+    // Build HTML for print
+    const cols = selFields.map(k => EXPORT_FIELDS.find(f=>f.k===k)).filter(Boolean);
+    const now = new Date().toLocaleString("fr-DZ");
+
+    const groupRows = grouped.map(([gName, gcars]) => {
+      const rows = gcars.map(car => {
+        const link = BASE_URL + "#car-" + car.id;
+        const cells = cols.map(col => `<td>${getFieldVal(car, col.k)}</td>`).join("");
+        return `<tr>${cells}<td><a href="${link}" style="color:#e8001d;font-size:10px;word-break:break-all;">🔗 Voir fiche</a></td></tr>`;
+      }).join("");
+      return `
+        <tr class="group-header"><td colspan="${cols.length+1}">${gName} — ${gcars.length} véhicule${gcars.length!==1?"s":""}</td></tr>
+        ${rows}
+      `;
+    }).join("");
+
+    const headerCells = cols.map(c=>`<th>${c.l}</th>`).join("") + "<th>Lien</th>";
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+    <title>Export El Warcha Auto</title>
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0;}
+      body{font-family:Arial,sans-serif;font-size:11px;color:#1c1c1c;padding:20px;}
+      h1{font-size:18px;margin-bottom:4px;color:#1c1c1c;}
+      .sub{font-size:10px;color:#888;margin-bottom:16px;}
+      table{width:100%;border-collapse:collapse;margin-top:8px;}
+      th{background:#1c1c1c;color:#fff;padding:6px 8px;text-align:left;font-size:10px;white-space:nowrap;}
+      td{padding:5px 8px;border-bottom:1px solid #e5e5e5;vertical-align:top;}
+      tr:nth-child(even) td{background:#f9f9f9;}
+      .group-header td{background:#e8001d;color:#fff;font-weight:700;font-size:11px;padding:6px 10px;letter-spacing:.04em;}
+      @media print{
+        body{padding:10px;}
+        a{color:#e8001d!important;}
+        .group-header td{-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#e8001d!important;}
+        th{-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#1c1c1c!important;}
+      }
+    </style></head><body>
+    <h1>🔧 EL WARCHA AUTO — Export</h1>
+    <div class="sub">Généré le ${now} · ${totalCars} véhicule${totalCars!==1?"s":""} · Groupé par : ${GROUP_OPTIONS.find(g=>g.k===groupBy)?.l} · Trié par : ${SORT_OPTIONS.find(s=>s.k===sortBy)?.l} (${sortDir==="asc"?"croissant":"décroissant"})</div>
+    <table><thead><tr>${headerCells}</tr></thead><tbody>${groupRows}</tbody></table>
+    </body></html>`;
+
+    const win = window.open("","_blank","width=1100,height=800");
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(()=>{ win.print(); setPrinting(false); }, 600);
+  };
+
+  return (
+    <div className="page-wrap" style={{padding:"86px 20px 60px",maxWidth:1200,margin:"0 auto"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:18,flexWrap:"wrap",gap:10}}>
+        <div>
+          <h1 style={{fontSize:24,fontWeight:900}}>📄 Export PDF</h1>
+          <p style={{color:"#9a9a9a",fontSize:13}}>{totalCars} véhicule{totalCars!==1?"s":""} sélectionné{totalCars!==1?"s":""}</p>
+        </div>
+        <button className="btn-red" onClick={exportPDF} disabled={printing||totalCars===0} style={{fontSize:13,padding:"10px 24px"}}>
+          {printing?"⏳ Génération...":"📥 Exporter PDF"}
+        </button>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"1fr 340px",gap:14,alignItems:"start"}}>
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          {/* Filters */}
+          <SearchPanel filters={filters} setFilters={setFilters}/>
+          <div className="card" style={{padding:14}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+              <input className="f" placeholder="🔍 Recherche rapide..." value={search} onChange={e=>setSearch2(e.target.value)} style={{fontSize:13}}/>
+              {search&&<button className="btn-out" onClick={()=>setSearch2("")} style={{fontSize:11}}>✕</button>}
+            </div>
+          </div>
+
+          {/* Preview */}
+          <div className="card" style={{padding:14}}>
+            <h3 style={{fontSize:13,fontWeight:800,textTransform:"uppercase",letterSpacing:".06em",marginBottom:10}}>Aperçu du résultat</h3>
+            {grouped.length===0
+              ? <div style={{textAlign:"center",padding:40,color:"#9a9a9a"}}><div style={{fontSize:28,marginBottom:8}}>🔍</div><p>Aucun véhicule</p></div>
+              : grouped.map(([gName, gcars])=>(
+                <div key={gName} style={{marginBottom:12}}>
+                  <div style={{background:"#1c1c1c",color:"#fff",padding:"5px 12px",borderRadius:"6px 6px 0 0",fontSize:12,fontWeight:700,display:"flex",justifyContent:"space-between"}}>
+                    <span>{gName}</span><span style={{color:"#e8001d"}}>{gcars.length} voiture{gcars.length!==1?"s":""}</span>
+                  </div>
+                  <div style={{border:"1px solid #e5e5e5",borderTop:"none",borderRadius:"0 0 6px 6px",overflow:"hidden"}}>
+                    {gcars.map((car,i)=>(
+                      <div key={car.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 12px",background:i%2===0?"#fff":"#fafafa",fontSize:12,borderBottom:i<gcars.length-1?"1px solid #f0f0f0":"none"}}>
+                        <span style={{fontWeight:700}}>{car.year} {car.brand} {car.model} {car.trim||""}</span>
+                        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                          <STag status={car.status}/>
+                          <span style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:13,color:"#e8001d"}}>
+                            {car.price_currency==="USD"?("$"+new Intl.NumberFormat("fr-DZ").format(Math.round(car.price_usd||0))):fmtCNY(car.price_cny)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+
+        {/* Config panel */}
+        <div style={{display:"flex",flexDirection:"column",gap:12,position:"sticky",top:96}}>
+          <div className="card" style={{padding:16}}>
+            <h3 style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:".06em",marginBottom:12,paddingBottom:8,borderBottom:"1px solid #e5e5e5"}}>🗂 Grouper par</h3>
+            <select className="f" value={groupBy} onChange={e=>setGroupBy(e.target.value)} style={{fontSize:13}}>
+              {GROUP_OPTIONS.map(o=><option key={o.k} value={o.k}>{o.l}</option>)}
+            </select>
+          </div>
+
+          <div className="card" style={{padding:16}}>
+            <h3 style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:".06em",marginBottom:12,paddingBottom:8,borderBottom:"1px solid #e5e5e5"}}>↕ Trier par</h3>
+            <select className="f" value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{fontSize:13,marginBottom:8}}>
+              {SORT_OPTIONS.map(o=><option key={o.k} value={o.k}>{o.l}</option>)}
+            </select>
+            <div style={{display:"flex",gap:0,borderRadius:8,overflow:"hidden",border:"1.5px solid #ddd"}}>
+              {[{v:"asc",l:"⬆ Croissant"},{v:"desc",l:"⬇ Décroissant"}].map(d=>(
+                <button key={d.v} onClick={()=>setSortDir(d.v)}
+                  style={{flex:1,padding:"7px 4px",fontSize:11,fontWeight:700,border:"none",background:sortDir===d.v?"#1c1c1c":"#fff",color:sortDir===d.v?"#fff":"#555",cursor:"pointer"}}>
+                  {d.l}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="card" style={{padding:16}}>
+            <h3 style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:".06em",marginBottom:12,paddingBottom:8,borderBottom:"1px solid #e5e5e5"}}>📋 Colonnes dans le PDF</h3>
+            <div style={{display:"flex",flexDirection:"column",gap:5}}>
+              {EXPORT_FIELDS.map(f=>(
+                <label key={f.k} style={{display:"flex",alignItems:"center",gap:7,fontSize:12,fontWeight:600,cursor:"pointer",padding:"4px 6px",borderRadius:5,background:selFields.includes(f.k)?"#f0fdf4":"transparent",border:"1px solid "+(selFields.includes(f.k)?"#a7f3d0":"transparent")}}>
+                  <input type="checkbox" checked={selFields.includes(f.k)} onChange={()=>toggleField(f.k)} style={{accentColor:"#e8001d",width:13,height:13}}/>
+                  {f.l}
+                </label>
+              ))}
+            </div>
+            <p style={{fontSize:10,color:"#9a9a9a",marginTop:10}}>Une colonne "Lien" est toujours ajoutée automatiquement.</p>
+          </div>
         </div>
       </div>
     </div>
   );
 };
+
 
 export default function App() {
   const [page,    setPage]    = useState("home");
@@ -1000,6 +1358,8 @@ export default function App() {
           : null;
       case "add-car":
         return <AddCarPage {...p} dealers={dealers} onAdd={handleAddCar}/>;
+      case "export":
+        return <ExportPage {...p} cars={cars} dealers={dealers}/>;
       case "settings":
         return <SettingsPage {...p} setSettings={setSettings}/>;
       default:
