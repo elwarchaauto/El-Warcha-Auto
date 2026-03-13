@@ -47,6 +47,7 @@ const ALL_BRANDS = [
 ];
 const BRAND_NAMES = ALL_BRANDS.map(b=>b.n);
 
+
 const EMPTY_FILTERS = {brand:"",fuel:"",condition:"",status:"",color:"",body_type:"",yearMin:"",yearMax:"",mileageMax:300000,priceMax:500000,equipment:{}};
 const EMPTY_CAR     = {dealer_id:"",brand:"",model:"",year:"",trim:"",body_type:"",condition:"used",status:"available",mileage:"",origin:"imported",price_cny:"",negotiable:false,fuel_type:"",transmission:"",engine_size:"",color:"",doors:"",description:""};
 const EMPTY_EQ      = Object.fromEntries(Object.keys(EQUIPMENT_LABELS).map(k=>[k,false]));
@@ -94,11 +95,9 @@ select.f{appearance:auto;}
 @media(max-width:900px){
   .nav-top{display:none!important;}
   .nav-search{display:none!important;}
-  .mobile-nav{display:flex!important;}
   .search-grid{grid-template-columns:1fr!important;}
   .detail-grid{grid-template-columns:1fr!important;}
 }
-.mobile-nav{display:none;}
 @media(max-width:700px){
   .car-card{flex-direction:column!important;}
   .car-card-photo{width:100%!important;min-height:200px!important;}
@@ -117,9 +116,6 @@ select.f{appearance:auto;}
 }
 `;
 
-// ============================================================
-// SMALL COMPONENTS
-// ============================================================
 const CarSVG = ({size=80}) => (
   <svg width={size} height={size*.55} viewBox="0 0 120 66" fill="none">
     <rect x="4" y="28" width="112" height="26" rx="6" fill="#e5e7eb"/>
@@ -153,25 +149,11 @@ const CTag = ({condition}) => condition==="new" ? <span className="tag tb">Neuf<
 
 const BrandLogo = ({brand, size=28}) => {
   const b = ALL_BRANDS.find(x=>x.n===brand);
-  const [src, setSrc] = useState(null);
-  const [failed, setFailed] = useState(false);
-  React.useEffect(()=>{
-    setFailed(false);
-    if (!b?.d) { setSrc(null); return; }
-    // Try logo.dev first (ad-blocker friendly), fallback to favicon
-    setSrc("https://img.logo.dev/"+b.d+"?token=pk_X0jvPlPHQUKP8HhMSvlP5g&size=64&format=png");
-  },[brand]);
-  if (!b?.d || failed || !src) return <span style={{fontSize:9,fontWeight:900,color:"#9a9a9a",lineHeight:1,textAlign:"center",display:"block",padding:"0 2px"}}>{(brand||"?").slice(0,4)}</span>;
-  return <img src={src} alt={brand} width={size} height={Math.round(size*.7)} style={{objectFit:"contain"}} onError={()=>{
-    // fallback to Google favicon service
-    if (!src.includes("google.com")) setSrc("https://www.google.com/s2/favicons?domain="+b.d+"&sz=64");
-    else setFailed(true);
-  }}/>;
+  const [ok, setOk] = useState(true);
+  if (!b?.d || !ok) return <span style={{fontSize:9,fontWeight:900,color:"#9a9a9a",lineHeight:1,textAlign:"center"}}>{(brand||"?").slice(0,5)}</span>;
+  return <img src={"https://logo.clearbit.com/"+b.d} alt={brand} width={size} height={Math.round(size*.7)} style={{objectFit:"contain"}} onError={()=>setOk(false)}/>;
 };
 
-// ============================================================
-// NAVBAR
-// ============================================================
 const Navbar = ({page, setPage, search, setSearch}) => (
   <nav style={{background:"#fff",borderBottom:"3px solid #e8001d",position:"fixed",top:0,left:0,right:0,zIndex:300,boxShadow:"0 2px 10px rgba(0,0,0,.08)"}}>
     <div className="nav-top" style={{background:"#1c1c1c",padding:"4px 24px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -197,9 +179,9 @@ const Navbar = ({page, setPage, search, setSearch}) => (
         {search&&<button onClick={()=>setSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:"#9a9a9a",fontSize:13,padding:2}}>✕</button>}
       </div>
       <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
-        <div className="mobile-nav" style={{gap:4}}>
+        <div className="nav-top" style={{display:"flex",gap:4}}>
           {[{id:"home",l:"🚗"},{id:"dealers",l:"🏢"},{id:"settings",l:"⚙️"}].map(item=>(
-            <button key={item.id} onClick={()=>setPage(item.id)} style={{background:page===item.id?"#e8001d":"#f2f2f2",color:page===item.id?"#fff":"#555",border:"none",borderRadius:6,padding:"6px 10px",fontSize:16,transition:"all .18s"}}>{item.l}</button>
+            <button key={item.id} onClick={()=>setPage(item.id)} style={{background:page===item.id?"#e8001d":"#f2f2f2",color:page===item.id?"#fff":"#555",border:"none",borderRadius:6,padding:"6px 9px",fontSize:15}}>{item.l}</button>
           ))}
         </div>
         <button className="btn-red" onClick={()=>setPage("add-car")} style={{fontSize:12,padding:"7px 12px"}}>+ Voiture</button>
@@ -208,9 +190,6 @@ const Navbar = ({page, setPage, search, setSearch}) => (
   </nav>
 );
 
-// ============================================================
-// SEARCH PANEL
-// ============================================================
 const SearchPanel = ({filters, setFilters}) => {
   const [draft, setDraft] = useState({...filters});
   const [activeLetter, setActiveLetter] = useState("All");
@@ -328,9 +307,6 @@ const SearchPanel = ({filters, setFilters}) => {
   );
 };
 
-// ============================================================
-// CAR CARD
-// ============================================================
 const CarCard = ({car, settings, onClick}) => {
   const dzd    = calcDZD(car.price_cny, settings);
   const photos = car.photos||[];
@@ -399,9 +375,6 @@ const CarCard = ({car, settings, onClick}) => {
   );
 };
 
-// ============================================================
-// HOME PAGE
-// ============================================================
 const HomePage = ({cars, settings, loading, setPage, setSelectedCar, search, setSearch}) => {
   const [filters, setFilters] = useState({...EMPTY_FILTERS});
   const filtered = cars.filter(c => {
@@ -456,9 +429,6 @@ const HomePage = ({cars, settings, loading, setPage, setSelectedCar, search, set
   );
 };
 
-// ============================================================
-// PHOTO GRID
-// ============================================================
 const PhotoGrid = ({previews, onAdd, onRemove}) => {
   const inputRef = React.useRef(null);
   const handleFiles = e => {
@@ -496,9 +466,6 @@ const PhotoGrid = ({previews, onAdd, onRemove}) => {
   );
 };
 
-// ============================================================
-// FORM HELPERS
-// ============================================================
 const FF  = ({label,required,children}) => (<div><label className="lbl">{label}{required&&<span style={{color:"#e8001d",marginLeft:3}}>*</span>}</label>{children}</div>);
 const Sec = ({title,children}) => (
   <div className="card" style={{padding:18}}>
@@ -510,12 +477,10 @@ const Sec = ({title,children}) => (
   </div>
 );
 
-// ============================================================
-// CAR FORM (shared by Add and Edit)
-// ============================================================
 const CarForm = ({initial, initialEq, dealers, settings, onSubmit, onCancel, submitLabel, loading}) => {
   const [form, setForm] = useState(initial);
   const [eq,   setEq]   = useState(initialEq);
+  // Each entry: {src: string (dataURL or http URL), file: File|null}
   const [photos, setPhotos] = useState(
     (initial._existingPhotos||[]).map(url=>({src:url, file:null}))
   );
@@ -528,7 +493,6 @@ const CarForm = ({initial, initialEq, dealers, settings, onSubmit, onCancel, sub
   const previews = photos.map(p=>p.src);
   const newFiles = photos.filter(p=>p.file!==null).map(p=>p.file);
   const allPreviews = photos.map(p=>p.src);
-
   return (
     <div style={{display:"flex",flexDirection:"column",gap:12}}>
       <Sec title="Concessionnaire">
@@ -591,9 +555,6 @@ const CarForm = ({initial, initialEq, dealers, settings, onSubmit, onCancel, sub
   );
 };
 
-// ============================================================
-// ADD CAR PAGE
-// ============================================================
 const AddCarPage = ({dealers, settings, setPage, onAdd, showToast}) => {
   const [loading, setLoading] = useState(false);
   const handleSubmit = async (form, eq, files) => {
@@ -610,11 +571,13 @@ const AddCarPage = ({dealers, settings, setPage, onAdd, showToast}) => {
       };
       delete data._existingPhotos;
       const newCar = await createCar(data, eq);
+      // Upload all photos
       let photoUrls = [];
       for (const file of files) {
         try { const url = await uploadCarPhoto(newCar.id, file); if (url) photoUrls.push(url); } catch(_) {}
       }
       if (photoUrls.length) await updateCar(newCar.id, {photos: photoUrls});
+      // Resolve dealer from the dealers list (compare as strings to be safe)
       const dealerObj = dealers.find(d => String(d.id) === String(form.dealer_id)) || null;
       onAdd({...newCar, photos: photoUrls, car_equipment: [eq], dealers: dealerObj});
       showToast("Voiture ajoutée !", "success");
@@ -631,9 +594,6 @@ const AddCarPage = ({dealers, settings, setPage, onAdd, showToast}) => {
   );
 };
 
-// ============================================================
-// CAR DETAIL PAGE
-// ============================================================
 const CarDetailPage = ({car, settings, setPage, onDelete, onUpdate, showToast, dealers}) => {
   const [activePhoto, setActivePhoto] = useState(0);
   const [editing, setEditing] = useState(false);
@@ -722,9 +682,6 @@ const CarDetailPage = ({car, settings, setPage, onDelete, onUpdate, showToast, d
   );
 };
 
-// ============================================================
-// EDIT CAR PAGE
-// ============================================================
 const EditCarPage = ({car, settings, setPage, onUpdate, showToast, onCancel, dealers}) => {
   const [loading, setLoading] = useState(false);
   const initialForm = {
@@ -739,7 +696,7 @@ const EditCarPage = ({car, settings, setPage, onUpdate, showToast, onCancel, dea
     engine_size: car.engine_size||"", color: car.color||"",
     doors: car.doors||"", description: car.description||"",
   };
-  const initialEq = {...EMPTY_EQ, ...(car.car_equipment?.[0]||{})};
+  const initialEq = {...EMPTY_EQ, ...Object.fromEntries(Object.keys(EMPTY_EQ).map(k=>[k, car.car_equipment?.[0]?.[k]??false]))};
 
   const handleSubmit = async (form, eq, newFiles, allPreviews) => {
     setLoading(true);
@@ -750,6 +707,7 @@ const EditCarPage = ({car, settings, setPage, onUpdate, showToast, onCancel, dea
       data.mileage = parseInt(data.mileage)||null;
       data.price_cny = parseFloat(data.price_cny)||null;
       data.doors = parseInt(data.doors)||null;
+      // Keep existing http URLs that weren't removed, then append new uploads
       const existingUrls = allPreviews.filter(p => typeof p==="string" && p.startsWith("http"));
       let newUrls = [];
       for (const file of newFiles) {
@@ -757,6 +715,7 @@ const EditCarPage = ({car, settings, setPage, onUpdate, showToast, onCancel, dea
       }
       const allPhotos = [...existingUrls, ...newUrls];
       await updateCar(car.id, {...data, photos: allPhotos}, eq);
+      // Resolve updated dealer name from full list
       const dealerObj = dealers.find(d => String(d.id) === String(data.dealer_id)) || car.dealers || null;
       onUpdate({...car, ...data, photos: allPhotos, car_equipment: [eq], dealers: dealerObj});
       showToast("Voiture modifiée !", "success");
@@ -774,10 +733,7 @@ const EditCarPage = ({car, settings, setPage, onUpdate, showToast, onCancel, dea
   );
 };
 
-// ============================================================
-// DEALERS PAGE
-// ============================================================
-const DealersPage = ({dealers, cars, loading, setPage, setSelectedDealer, onDeleteDealer}) => (
+const DealersPage = ({dealers, cars, loading, setPage, setSelectedDealer, onDeleteDealer, showToast}) => (
   <div className="page-wrap" style={{padding:"86px 20px 40px",maxWidth:1200,margin:"0 auto"}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:18,flexWrap:"wrap",gap:10}}>
       <div><h1 style={{fontSize:26,fontWeight:900}}>Concessionnaires</h1><p style={{color:"#9a9a9a",fontSize:13}}>{dealers.length} partenaire{dealers.length!==1?"s":""}</p></div>
@@ -816,9 +772,6 @@ const DealersPage = ({dealers, cars, loading, setPage, setSelectedDealer, onDele
   </div>
 );
 
-// ============================================================
-// DEALER DETAIL PAGE
-// ============================================================
 const DealerDetailPage = ({dealer, cars, settings, setPage, setSelectedCar, setSelectedDealer, onDeleteDealer}) => {
   const dc=cars.filter(c=>c.dealer_id===dealer.id);
   return (
@@ -852,9 +805,6 @@ const DealerDetailPage = ({dealer, cars, settings, setPage, setSelectedCar, setS
   );
 };
 
-// ============================================================
-// ADD DEALER PAGE
-// ============================================================
 const AddDealerPage = ({setPage, onAdd, showToast}) => {
   const [form, setForm]=useState({name:"",mobile:"",email:"",google_maps_link:"",website:"",notes:""});
   const [loading, setLoading]=useState(false);
@@ -890,9 +840,6 @@ const AddDealerPage = ({setPage, onAdd, showToast}) => {
   );
 };
 
-// ============================================================
-// EDIT DEALER PAGE
-// ============================================================
 const EditDealerPage = ({dealer, setPage, onUpdate, showToast}) => {
   const [form, setForm] = useState({
     name: dealer.name||"", mobile: dealer.mobile||"",
@@ -935,10 +882,6 @@ const EditDealerPage = ({dealer, setPage, onUpdate, showToast}) => {
     </div>
   );
 };
-
-// ============================================================
-// SETTINGS PAGE
-// ============================================================
 const SettingsPage = ({settings, setSettings, showToast}) => {
   const [fee, setFee]=useState(settings?.shipment_fee_usd||0);
   const [refreshing, setRef]=useState(false);
@@ -979,9 +922,6 @@ const SettingsPage = ({settings, setSettings, showToast}) => {
   );
 };
 
-// ============================================================
-// APP ROOT
-// ============================================================
 export default function App() {
   const [page,    setPage]    = useState("home");
   const [cars,    setCars]    = useState([]);
@@ -1006,6 +946,7 @@ export default function App() {
     load();
   },[]);
 
+  // ── Cars ──
   const handleAddCar    = car  => setCars(prev=>[car, ...prev]);
   const handleUpdateCar = updated => {
     setCars(prev=>prev.map(c=>c.id===updated.id ? updated : c));
@@ -1018,13 +959,14 @@ export default function App() {
       .catch(e=>showToast("Erreur: "+e.message,"error"));
   };
 
+  // ── Dealers ──
   const handleAddDealer    = d => setDealers(prev=>[d, ...prev]);
   const handleUpdateDealer = updated => {
     setDealers(prev=>prev.map(d=>d.id===updated.id ? updated : d));
     setSelectedDealer(updated);
   };
   const handleDeleteDealer = (id, goBack=false) => {
-    if (!window.confirm("Supprimer ce concessionnaire ?")) return;
+    if (!window.confirm("Supprimer ce concessionnaire ? Ses voitures ne seront pas supprimées.")) return;
     deleteDealer(id)
       .then(()=>{ setDealers(prev=>prev.filter(d=>d.id!==id)); showToast("Concessionnaire supprimé","success"); if (goBack) setPage("dealers"); })
       .catch(e=>showToast("Erreur: "+e.message,"error"));
@@ -1038,13 +980,17 @@ export default function App() {
         return <HomePage {...p} cars={cars} loading={loading} setSelectedCar={setSelectedCar} search={search} setSearch={setSearch}/>;
       case "car-detail":
         return selectedCar
-          ? <CarDetailPage {...p} car={selectedCar} dealers={dealers} onDelete={handleDeleteCar} onUpdate={handleUpdateCar}/>
+          ? <CarDetailPage {...p} car={selectedCar} dealers={dealers}
+              onDelete={handleDeleteCar} onUpdate={handleUpdateCar}/>
           : null;
       case "dealers":
-        return <DealersPage {...p} dealers={dealers} cars={cars} loading={loading} setSelectedDealer={setSelectedDealer} onDeleteDealer={handleDeleteDealer}/>;
+        return <DealersPage {...p} dealers={dealers} cars={cars} loading={loading}
+          setSelectedDealer={setSelectedDealer} onDeleteDealer={handleDeleteDealer}/>;
       case "dealer-detail":
         return selectedDealer
-          ? <DealerDetailPage {...p} dealer={selectedDealer} cars={cars} setSelectedCar={setSelectedCar} setSelectedDealer={setSelectedDealer} onDeleteDealer={handleDeleteDealer}/>
+          ? <DealerDetailPage {...p} dealer={selectedDealer} cars={cars}
+              setSelectedCar={setSelectedCar} setSelectedDealer={setSelectedDealer}
+              onDeleteDealer={handleDeleteDealer}/>
           : null;
       case "add-dealer":
         return <AddDealerPage {...p} onAdd={handleAddDealer}/>;
