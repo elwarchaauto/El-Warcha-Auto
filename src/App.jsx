@@ -1227,6 +1227,9 @@ const SORT_OPTIONS = [
   {k:"dealers.name",l:"Concessionnaire"},
 ];
 
+// PDF-safe number formatter — uses narrow space as thousands separator (no / or ,)
+const fmtPDF = n => n != null ? Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") : "-";
+
 const getFieldVal = (car, key, settings=null) => {
   // Computed keys — must be checked BEFORE the early-return on car[key]
   if (key === "brand_model") return (car.brand||"?") + " " + (car.model||"?");
@@ -1235,7 +1238,7 @@ const getFieldVal = (car, key, settings=null) => {
     const fob   = parseFloat(car.price_fob)||0;
     const ship  = parseFloat(settings?.shipment_fee_usd)||0;
     const total = fob > 0 ? fob + ship : 0;
-    return total>0 ? "$"+new Intl.NumberFormat("fr-DZ").format(Math.round(total)) : "—";
+    return total>0 ? "$ "+fmtPDF(total) : "—";
   }
   if (key === "total_dzd") {
     const fob   = parseFloat(car.price_fob)||0;
@@ -1243,7 +1246,7 @@ const getFieldVal = (car, key, settings=null) => {
     const total = fob > 0 ? fob + ship : 0;
     const rate  = parseFloat(settings?.usd_dzd_rate)||0;
     const dzd   = total > 0 && rate > 0 ? Math.round(total * rate) : null;
-    return dzd ? new Intl.NumberFormat("fr-DZ").format(dzd)+" DZD" : "—";
+    return dzd ? fmtPDF(dzd)+" DZD" : "—";
   }
   // Real car fields
   const v = car[key];
@@ -1253,9 +1256,9 @@ const getFieldVal = (car, key, settings=null) => {
   if (key === "condition") return v === "new" ? "Neuf" : "Occasion";
   if (key === "status") return {available:"Disponible",sold:"Vendu",reserved:"Réservé"}[v] || v;
   if (key === "origin") return v === "imported" ? "Importé" : "Local";
-  if (key === "price_cny") return "¥" + new Intl.NumberFormat("zh-CN").format(v);
-  if (key === "price_usd") return "$" + new Intl.NumberFormat("fr-DZ").format(Math.round(v));
-  if (key === "price_fob") return "FOB $" + new Intl.NumberFormat("fr-DZ").format(Math.round(v));
+  if (key === "price_cny") return "¥ " + fmtPDF(v);
+  if (key === "price_usd") return "$ " + fmtPDF(v);
+  if (key === "price_fob") return "FOB $ " + fmtPDF(v);
   return String(v);
 };
 
@@ -1370,85 +1373,172 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
   const totalCars = filtered.length;
 
   // ── PDF Generation ──
-  const exportPDF = () => {
+  const exportPDF = async () => {
     setPrinting(true);
-    // Build HTML for print
-    const cols = selFields.map(k => EXPORT_FIELDS.find(f=>f.k===k)).filter(Boolean);
-    const now = new Date().toLocaleString("fr-DZ");
-
-    const groupRows = grouped.map(([gName, gcars]) => {
-      // Build rows with rowspan: detect consecutive identical values per column
-      const rowData = gcars.map(car => {
-        const params = new URLSearchParams();
-        if (car.brand)         params.set('brand',  car.brand);
-        if (car.model)         params.set('model',  car.model);
-        if (car.year)          params.set('year',   String(car.year));
-        if (car.dealers?.name) params.set('dealer', car.dealers.name);
-        if (car.trim)          params.set('trim',   car.trim);
-        if (car.color)         params.set('color',  car.color);
-        const link = BASE_URL + '/?' + params.toString();
-        return { vals: cols.map(col => getFieldVal(car, col.k, settings)), link };
-      });
-
-      // Compute rowspans per column
-      const spanMatrix = cols.map((_, ci) => {
-        const spans = new Array(rowData.length).fill(1);
-        for (let i = rowData.length - 2; i >= 0; i--) {
-          if (rowData[i].vals[ci] === rowData[i+1].vals[ci] && rowData[i].vals[ci] !== "—") {
-            spans[i] = spans[i+1] + 1;
-            spans[i+1] = 0; // hidden
-          }
-        }
-        return spans;
-      });
-
-      const rows = rowData.map((row, ri) => {
-        const cells = cols.map((col, ci) => {
-          const span = spanMatrix[ci][ri];
-          if (span === 0) return '';
-          const rs = span > 1 ? ` rowspan="${span}"` : '';
-          const bg = span > 1 ? ' style="background:#fff8f8;font-weight:700;"' : '';
-          return `<td${rs}${bg}>${row.vals[ci]}</td>`;
-        }).join("");
-        return `<tr>${cells}<td><a href="${row.link}" style="color:#d36135;font-size:10px;">🔗 Voir</a></td></tr>`;
-      }).join("");
-
-      return `
-        <tr class="group-header"><td colspan="${cols.length+1}">${gName} — ${gcars.length} véhicule${gcars.length!==1?"s":""}</td></tr>
-        ${rows}
-      `;
-    }).join("");
-
-    const headerCells = cols.map(c=>`<th>${c.l}</th>`).join("") + "<th>Lien</th>";
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
-    <title>Export El Warcha Auto</title>
-    <style>
-      *{box-sizing:border-box;margin:0;padding:0;}
-      body{font-family:Arial,sans-serif;font-size:11px;color:#1c1c1c;padding:20px;}
-      h1{font-size:18px;margin-bottom:4px;color:#1c1c1c;}
-      .sub{font-size:10px;color:#888;margin-bottom:16px;}
-      table{width:100%;border-collapse:collapse;margin-top:8px;}
-      th{background:#1c1c1c;color:#fff;padding:6px 8px;text-align:left;font-size:10px;white-space:nowrap;}
-      td{padding:5px 8px;border-bottom:1px solid #e5e5e5;vertical-align:top;}
-      tr:nth-child(even) td{background:#f9f9f9;}
-      .group-header td{background:#d36135;color:#fff;font-weight:700;font-size:11px;padding:6px 10px;letter-spacing:.04em;}
-      @media print{
-        body{padding:10px;}
-        a{color:#d36135!important;}
-        .group-header td{-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#d36135!important;}
-        th{-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#1c1c1c!important;}
+    try {
+      // Dynamically load jsPDF + autoTable from CDN
+      if (!window.jspdf) {
+        await new Promise((res, rej) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+          s.onload = res; s.onerror = rej;
+          document.head.appendChild(s);
+        });
       }
-    </style></head><body>
-    <h1>🔧 EL WARCHA AUTO — Export</h1>
-    <div class="sub">Généré le ${now} · ${totalCars} véhicule${totalCars!==1?"s":""} · Groupé par : ${GROUP_OPTIONS.find(g=>g.k===groupBy)?.l} · Trié par : ${SORT_OPTIONS.find(s=>s.k===sortBy)?.l} (${sortDir==="asc"?"croissant":"décroissant"})</div>
-    <table><thead><tr>${headerCells}</tr></thead><tbody>${groupRows}</tbody></table>
-    </body></html>`;
+      if (!window.jspdf?.jsPDF?.prototype?.autoTable) {
+        await new Promise((res, rej) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js';
+          s.onload = res; s.onerror = rej;
+          document.head.appendChild(s);
+        });
+      }
 
-    const win = window.open("","_blank","width=1100,height=800");
-    win.document.write(html);
-    win.document.close();
-    win.focus();
-    setTimeout(()=>{ win.print(); setPrinting(false); }, 600);
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const cols = selFields.map(k => EXPORT_FIELDS.find(f=>f.k===k)).filter(Boolean);
+      const now  = new Date().toLocaleString("fr-DZ");
+      const fileName = `elwarcha-export-${new Date().toISOString().slice(0,10)}.pdf`;
+
+      // ── PAGE HEADER ──────────────────────────────────────────
+      const drawHeader = () => {
+        doc.setFillColor(232, 0, 29);
+        doc.rect(0, 0, 297, 1.5, 'F');
+        doc.setTextColor(28, 28, 28);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('El Warcha Auto', 10, 11);
+        doc.setFontSize(6.5);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(160, 160, 160);
+        doc.text('IMPORT · VENTE · ALGERIE', 10, 16);
+        const sortLabel = SORT_OPTIONS.find(s=>s.k===sortBy)?.l || '';
+        const groupLabel = GROUP_OPTIONS.find(g=>g.k===groupBy)?.l || '';
+        const meta = `${now}   ·   ${totalCars} vehicule${totalCars!==1?'s':''}   ·   Groupe: ${groupLabel}   ·   Tri: ${sortLabel} (${sortDir==='asc'?'croissant':'decroissant'})`;
+        doc.setFontSize(6);
+        doc.setTextColor(140, 140, 140);
+        doc.text(meta, 289, 10, { align: 'right' });
+
+      };
+      drawHeader();
+
+      let startY = 24;
+
+      grouped.forEach(([gName, gcars]) => {
+        if (startY > 182) { doc.addPage(); drawHeader(); startY = 24; }
+
+        // ── GROUP LABEL ────────────────────────────────────────
+        doc.setFillColor(232, 0, 29);
+        doc.rect(8, startY, 2.5, 7, 'F');
+        doc.setTextColor(28, 28, 28);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text(gName, 13.5, startY + 5);
+        const countTxt = `    (${gcars.length} vehicule${gcars.length!==1?'s':''})`;
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(130, 130, 130);
+
+        startY += 10;
+
+        // ── TABLE ──────────────────────────────────────────────
+        const head = [cols.map(c => c.l).concat('Lien')];
+
+        const rowVals = gcars.map(car => {
+          const params = new URLSearchParams();
+          if (car.brand)         params.set('brand',  car.brand);
+          if (car.model)         params.set('model',  car.model);
+          if (car.year)          params.set('year',   String(car.year));
+          if (car.dealers?.name) params.set('dealer', car.dealers.name);
+          if (car.trim)          params.set('trim',   car.trim);
+          if (car.color)         params.set('color',  car.color);
+          const link = BASE_URL + '/?' + params.toString();
+          return { cells: cols.map(col => getFieldVal(car, col.k, settings)), link };
+        });
+
+        // Which cells are merged (same value as row above)
+        const mergedCells = cols.map((_, ci) =>
+          rowVals.map((row, ri) =>
+            ri > 0 && row.cells[ci] === rowVals[ri-1].cells[ci] && row.cells[ci] !== '-'
+          )
+        );
+
+        const body = rowVals.map((row, ri) =>
+          row.cells.map((val, ci) => ({
+            content: mergedCells[ci][ri] ? '' : val,
+            styles: mergedCells[ci][ri] ? { lineColor: [255,255,255] } : {},
+          })).concat({
+            content: 'Voir fiche',
+            styles: { textColor: [232,0,29], fontStyle: 'bold', fontSize: 7, halign: 'center' },
+            link: row.link,
+          })
+        );
+
+        const colStyles = {};
+        colStyles[cols.length] = { cellWidth: 20, halign: 'center' };
+
+        doc.autoTable({
+          head,
+          body,
+          startY,
+          theme: 'striped',
+          styles: {
+            fontSize: 7.5,
+            cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
+            overflow: 'ellipsize',
+            textColor: [30, 30, 30],
+            lineColor: [230, 230, 230],
+            lineWidth: 0.15,
+          },
+          headStyles: {
+            fillColor: [245, 245, 245],
+            textColor: [70, 70, 70],
+            fontStyle: 'bold',
+            fontSize: 7,
+            lineColor: [210, 210, 210],
+            lineWidth: 0.3,
+          },
+          alternateRowStyles: { fillColor: [250, 250, 250] },
+          columnStyles: colStyles,
+          margin: { left: 8, right: 8 },
+          tableLineColor: [210, 210, 210],
+          tableLineWidth: 0.3,
+          didDrawCell: (data) => {
+            const ci = data.column.index;
+            const ri = data.row.index;
+            // Erase top border of merged cells by painting over it
+            if (data.section === 'body' && ci < cols.length && mergedCells[ci]?.[ri]) {
+              const bg = ri % 2 === 0 ? 255 : 250;
+              doc.setFillColor(bg, bg, bg);
+              doc.rect(data.cell.x + 0.1, data.cell.y - 0.1, data.cell.width - 0.2, 0.35, 'F');
+            }
+            // Clickable link
+            if (data.section === 'body' && ci === cols.length && data.cell.raw?.link) {
+              doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url: data.cell.raw.link });
+            }
+          },
+        });
+        startY = doc.lastAutoTable.finalY + 8;
+      });
+
+      // ── FOOTER on every page ──────────────────────────────────
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+
+        doc.setFontSize(6.5);
+        doc.setTextColor(170, 170, 170);
+        doc.setFont('helvetica', 'normal');
+        doc.text('El Warcha Auto', 8, 205.5);
+        doc.text(`${i} / ${pageCount}`, 289, 205.5, { align: 'right' });
+      }
+
+      doc.save(fileName);
+    } catch(e) {
+      showToast('Erreur export PDF: ' + e.message, 'error');
+    } finally {
+      setPrinting(false);
+    }
   };
 
   return (
