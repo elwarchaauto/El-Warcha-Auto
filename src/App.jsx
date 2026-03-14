@@ -60,7 +60,7 @@ const _deepLink = {
 };
 const _hasDeepLink = Object.values(_deepLink).some(v => v !== '');
 
-const EMPTY_FILTERS = {brand:"",model:"",fuel:"",condition:"",status:"",color:"",body_type:"",yearMin:"",yearMax:"",mileageMax:300000,priceMax:500000,priceMaxUSD:50000,equipment:{}};
+const EMPTY_FILTERS = {brand:"",model:"",fuel:"",transmission:"",condition:"",status:"",color:"",body_type:"",yearMin:"",yearMax:"",mileageMax:300000,priceMax:500000,priceMaxUSD:50000,equipment:{}};
 const EMPTY_CAR     = {dealer_id:"",brand:"",model:"",year:"",trim:"",body_type:"",condition:"used",status:"available",mileage:"",origin:"imported",price_fob:"",negotiable:false,fuel_type:"",transmission:"",engine_size:"",color:"",doors:"",description:""};
 const EMPTY_EQ      = Object.fromEntries(Object.keys(EQUIPMENT_LABELS).map(k=>[k,false]));
 
@@ -368,7 +368,7 @@ const SearchPanel = ({filters, setFilters, cars=[]}) => {
                 <option value="">—</option>{years.map(y=><option key={y}>{y}</option>)}
               </select></div>
           </div>
-          <div className="filter-grid4" style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:10,marginBottom:12,alignItems:"end"}}>
+          <div className="filter-grid4" style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr",gap:10,marginBottom:12,alignItems:"end"}}>
             <div><label className="lbl">Condition</label>
               <select className="f" style={{fontSize:12}} value={draft.condition} onChange={e=>setDraft(f=>({...f,condition:e.target.value}))}>
                 <option value="">Toutes</option><option value="new">Neuf</option><option value="used">Occasion</option>
@@ -376,6 +376,10 @@ const SearchPanel = ({filters, setFilters, cars=[]}) => {
             <div><label className="lbl">Carburant</label>
               <select className="f" style={{fontSize:12}} value={draft.fuel} onChange={e=>setDraft(f=>({...f,fuel:e.target.value}))}>
                 <option value="">Tous</option>{FUEL_TYPES.map(f=><option key={f}>{f}</option>)}
+              </select></div>
+            <div><label className="lbl">Transmission</label>
+              <select className="f" style={{fontSize:12}} value={draft.transmission||""} onChange={e=>setDraft(f=>({...f,transmission:e.target.value}))}>
+                <option value="">Toutes</option>{TRANSMISSIONS.map(t=><option key={t}>{t}</option>)}
               </select></div>
             <div><label className="lbl">Statut</label>
               <select className="f" style={{fontSize:12}} value={draft.status} onChange={e=>setDraft(f=>({...f,status:e.target.value}))}>
@@ -538,6 +542,7 @@ const HomePage = ({cars, settings, loading, setPage, setSelectedCar, search, set
     if (filters.brand     && c.brand!==filters.brand) return false;
     if (filters.model     && c.model!==filters.model) return false;
     if (filters.fuel      && c.fuel_type!==filters.fuel) return false;
+    if (filters.transmission && c.transmission!==filters.transmission) return false;
     if (filters.condition && c.condition!==filters.condition) return false;
     if (filters.status    && c.status!==filters.status) return false;
     if (filters.color     && c.color!==filters.color) return false;
@@ -546,7 +551,7 @@ const HomePage = ({cars, settings, loading, setPage, setSelectedCar, search, set
     if (filters.yearMax   && c.year > parseInt(filters.yearMax)) return false;
     if ((filters.mileageMax||300000)<300000 && (c.mileage||0)>filters.mileageMax) return false;
     if ((filters.priceMax||500000)<500000   && c.price_currency!=="USD" && (c.price_cny||0)>filters.priceMax) return false;
-    if ((filters.priceMaxUSD||50000)<50000  && c.price_currency==="USD"  && (c.price_usd||0)>filters.priceMaxUSD) return false;
+    if ((filters.priceMaxUSD||50000)<50000  && (parseFloat(c.price_fob)||0)>filters.priceMaxUSD) return false;
     if (filters.equipment) for (const [k,v] of Object.entries(filters.equipment)) if (v && !c.car_equipment?.[0]?.[k]) return false;
     return true;
   });
@@ -1196,7 +1201,7 @@ const EXPORT_FIELDS = [
   {k:"brand",l:"Marque"},{k:"model",l:"Modèle"},{k:"year",l:"Année"},
   {k:"trim",l:"Version"},{k:"body_type",l:"Carrosserie"},{k:"condition",l:"Condition"},
   {k:"status",l:"Statut"},{k:"mileage",l:"Kilométrage"},{k:"origin",l:"Origine"},
-  {k:"price_cny",l:"Prix CNY"},{k:"price_usd",l:"Prix USD"},{k:"price_fob",l:"Prix FOB"},{k:"total_usd",l:"Total USD (+ transport)"},{k:"total_dzd",l:"Total DZD"},{k:"fuel_type",l:"Carburant"},
+  {k:"price_fob",l:"Prix FOB"},{k:"total_usd",l:"Total USD (+ transport)"},{k:"total_dzd",l:"Total DZD"},{k:"fuel_type",l:"Carburant"},
   {k:"transmission",l:"Transmission"},{k:"engine_size",l:"Cylindrée"},
   {k:"color",l:"Couleur"},{k:"doors",l:"Portes"},{k:"negotiable",l:"Négociable"},
   {k:"dealers.name",l:"Concessionnaire"},
@@ -1206,6 +1211,7 @@ const GROUP_OPTIONS = [
   {k:"brand",l:"Marque"},
   {k:"brand_model",l:"Marque + Modèle"},
   {k:"model",l:"Modèle"},
+  {k:"transmission",l:"Transmission"},
   {k:"status",l:"Statut"},
   {k:"condition",l:"Condition"},
   {k:"fuel_type",l:"Carburant"},
@@ -1215,7 +1221,7 @@ const GROUP_OPTIONS = [
   {k:"year",l:"Année"},
 ];
 const SORT_OPTIONS = [
-  {k:"price_cny",l:"Prix CNY"},{k:"price_usd",l:"Prix USD"},
+  {k:"price_fob",l:"Prix FOB"},{k:"total_usd",l:"Total USD"},
   {k:"year",l:"Année"},{k:"mileage",l:"Kilométrage"},
   {k:"brand",l:"Marque"},{k:"model",l:"Modèle"},
   {k:"dealers.name",l:"Concessionnaire"},
@@ -1226,14 +1232,17 @@ const getFieldVal = (car, key, settings=null) => {
   if (key === "brand_model") return (car.brand||"?") + " " + (car.model||"?");
   if (key === "dealers.name") return car.dealers?.name || "—";
   if (key === "total_usd") {
-    const priceUSD = car.price_currency==="USD"
-      ? parseFloat(car.price_usd||0)
-      : parseFloat(car.price_cny||0) * parseFloat(settings?.cny_usd_rate||0);
-    const total = priceUSD + parseFloat(settings?.shipment_fee_usd||0);
+    const fob   = parseFloat(car.price_fob)||0;
+    const ship  = parseFloat(settings?.shipment_fee_usd)||0;
+    const total = fob > 0 ? fob + ship : 0;
     return total>0 ? "$"+new Intl.NumberFormat("fr-DZ").format(Math.round(total)) : "—";
   }
   if (key === "total_dzd") {
-    const dzd = calcDZD(car.price_cny, settings, car.price_usd, car.price_currency);
+    const fob   = parseFloat(car.price_fob)||0;
+    const ship  = parseFloat(settings?.shipment_fee_usd)||0;
+    const total = fob > 0 ? fob + ship : 0;
+    const rate  = parseFloat(settings?.usd_dzd_rate)||0;
+    const dzd   = total > 0 && rate > 0 ? Math.round(total * rate) : null;
     return dzd ? new Intl.NumberFormat("fr-DZ").format(dzd)+" DZD" : "—";
   }
   // Real car fields
@@ -1308,7 +1317,7 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
   const [groupBy,   setGroupBy]   = useState("dealers.name");
   const [sortBy,    setSortBy]    = useState("price_cny");
   const [sortDir,   setSortDir]   = useState("asc");
-  const [selFields, setSelFields] = useState(["brand","model","year","trim","status","price_usd","price_fob","total_usd","total_dzd"]);
+  const [selFields, setSelFields] = useState(["brand","model","year","trim","transmission","status","price_fob","total_usd","total_dzd"]);
   const [printing,  setPrinting]  = useState(false);
 
   const toggleField = k => setSelFields(f => f.includes(k) ? f.filter(x=>x!==k) : [...f,k]);
@@ -1320,6 +1329,7 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
     if (filters.brand     && c.brand!==filters.brand) return false;
     if (filters.model     && c.model!==filters.model) return false;
     if (filters.fuel      && c.fuel_type!==filters.fuel) return false;
+    if (filters.transmission && c.transmission!==filters.transmission) return false;
     if (filters.condition && c.condition!==filters.condition) return false;
     if (filters.status    && c.status!==filters.status) return false;
     if (filters.color     && c.color!==filters.color) return false;
@@ -1328,7 +1338,7 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
     if (filters.yearMax   && c.year > parseInt(filters.yearMax)) return false;
     if ((filters.mileageMax||300000)<300000 && (c.mileage||0)>filters.mileageMax) return false;
     if ((filters.priceMax||500000)<500000   && c.price_currency!=="USD" && (c.price_cny||0)>filters.priceMax) return false;
-    if ((filters.priceMaxUSD||50000)<50000  && c.price_currency==="USD"  && (c.price_usd||0)>filters.priceMaxUSD) return false;
+    if ((filters.priceMaxUSD||50000)<50000  && (parseFloat(c.price_fob)||0)>filters.priceMaxUSD) return false;
     if (filters.equipment) for (const [k,v] of Object.entries(filters.equipment)) if (v && !c.car_equipment?.[0]?.[k]) return false;
     return true;
   });
