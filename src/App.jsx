@@ -1113,7 +1113,7 @@ const getFieldVal = (car, key) => {
 };
 
 const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
-  const BASE_URL = 'https://elwarchaauto.vercel.app';
+  const BASE_URL = window.location.origin;
 
   // ── Filter state (same as HomePage) ──
   const [filters, setFilters]   = useState({...EMPTY_FILTERS});
