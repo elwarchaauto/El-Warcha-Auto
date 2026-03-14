@@ -48,7 +48,17 @@ const BRAND_NAMES = ALL_BRANDS.map(b=>b.n);
 
 
 // Read deep-link param immediately on module load (before React renders)
-const _deepLinkCarId = new URLSearchParams(window.location.search).get("car");
+// Read deep-link search params on module load
+const _dlParams = new URLSearchParams(window.location.search);
+const _deepLink = {
+  brand:  _dlParams.get('brand')  || '',
+  model:  _dlParams.get('model')  || '',
+  year:   _dlParams.get('year')   || '',
+  dealer: _dlParams.get('dealer') || '',
+  trim:   _dlParams.get('trim')   || '',
+  color:  _dlParams.get('color')  || '',
+};
+const _hasDeepLink = Object.values(_deepLink).some(v => v !== '');
 
 const EMPTY_FILTERS = {brand:"",fuel:"",condition:"",status:"",color:"",body_type:"",yearMin:"",yearMax:"",mileageMax:300000,priceMax:500000,equipment:{}};
 const EMPTY_CAR     = {dealer_id:"",brand:"",model:"",year:"",trim:"",body_type:"",condition:"used",status:"available",mileage:"",origin:"imported",price_cny:"",price_usd:"",price_fob:"",price_currency:"CNY",negotiable:false,fuel_type:"",transmission:"",engine_size:"",color:"",doors:"",description:""};
@@ -1171,7 +1181,14 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
 
     const groupRows = grouped.map(([gName, gcars]) => {
       const rows = gcars.map(car => {
-        const link = BASE_URL + "/?car=" + car.id;
+        const params = new URLSearchParams();
+        if (car.brand)         params.set('brand',  car.brand);
+        if (car.model)         params.set('model',  car.model);
+        if (car.year)          params.set('year',   car.year);
+        if (car.dealers?.name) params.set('dealer', car.dealers.name);
+        if (car.trim)          params.set('trim',   car.trim);
+        if (car.color)         params.set('color',  car.color);
+        const link = BASE_URL + '/?' + params.toString();
         const cells = cols.map(col => `<td>${getFieldVal(car, col.k)}</td>`).join("");
         return `<tr>${cells}<td><a href="${link}" style="color:#e8001d;font-size:10px;word-break:break-all;">🔗 Voir fiche</a></td></tr>`;
       }).join("");
@@ -1657,9 +1674,17 @@ export default function App() {
       try {
         const [c,d,s] = await Promise.all([getCars(), getDealers(), getSettings()]);
         setCars(c); setDealers(d); if (s) setSettings(s);
-        // Deep-link: ?car=UUID opens that car directly
-        if (_deepLinkCarId) {
-          const found = c.find(x => x.id === _deepLinkCarId);
+        // Deep-link: search by car info params
+        if (_hasDeepLink) {
+          const found = c.find(x => {
+            const matchBrand  = !_deepLink.brand  || x.brand === _deepLink.brand;
+            const matchModel  = !_deepLink.model  || x.model === _deepLink.model;
+            const matchYear   = !_deepLink.year   || String(x.year) === _deepLink.year;
+            const matchDealer = !_deepLink.dealer || x.dealers?.name === _deepLink.dealer;
+            const matchTrim   = !_deepLink.trim   || x.trim === _deepLink.trim;
+            const matchColor  = !_deepLink.color  || x.color === _deepLink.color;
+            return matchBrand && matchModel && matchYear && matchDealer && matchTrim && matchColor;
+          });
           if (found) { setSelectedCar(found); setPage("car-detail"); }
         }
       } catch(e) { showToast("Erreur Supabase: "+e.message,"error"); }
