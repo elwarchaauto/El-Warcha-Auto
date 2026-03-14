@@ -1228,7 +1228,7 @@ const SORT_OPTIONS = [
 ];
 
 // PDF-safe number formatter — uses narrow space as thousands separator (no / or ,)
-const fmtPDF = n => n != null ? Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") : "-";
+const fmtPDF = n => { if (n == null) return "-"; return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " "); };
 
 const getFieldVal = (car, key, settings=null) => {
   // Computed keys — must be checked BEFORE the early-return on car[key]
@@ -1456,23 +1456,79 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
           return { cells: cols.map(col => getFieldVal(car, col.k, settings)), link };
         });
 
-        // Which cells are merged (same value as row above)
-        const mergedCells = cols.map((_, ci) =>
-          rowVals.map((row, ri) =>
-            ri > 0 && row.cells[ci] === rowVals[ri-1].cells[ci] && row.cells[ci] !== '-'
-          )
-        );
+        // ── FLAT TABLE WITH VISUAL GROUPING ───────────────────
+        // Simple approach: one flat table, alternating light/white bg per brand group.
+        // Repeated values in key columns are blanked. No borders between same-group rows.
 
-        const body = rowVals.map((row, ri) =>
-          row.cells.map((val, ci) => ({
-            content: mergedCells[ci][ri] ? '' : val,
-            styles: mergedCells[ci][ri] ? { lineColor: [255,255,255] } : {},
+        // Detect group boundaries: a new group starts when brand OR model changes
+        const EVEN_BG = [255, 255, 255];
+        const ODD_BG  = [244, 246, 250];
+
+        // Build groups: [{start, end, bg}]
+        const groups = [];
+        let gIdx = 0;
+        rowVals.forEach((row, ri) => {
+          const newGroup = ri === 0
+            || row.cells[0] !== rowVals[ri-1].cells[0]
+            || row.cells[1] !== rowVals[ri-1].cells[1];
+          if (newGroup) { groups.push({start: ri, end: ri, bg: gIdx++ % 2 === 0 ? EVEN_BG : ODD_BG}); }
+          else { groups[groups.length-1].end = ri; }
+        });
+
+        // For each row, know its group info
+        const rowGroupInfo = rowVals.map((_, ri) => groups.find(g => ri >= g.start && ri <= g.end));
+
+        // For each cell col, compute which row is the "middle" of its value span within the group
+        // So text appears centered vertically in the merged span
+        const showAt = cols.map((_, ci) => {
+          const result = new Array(rowVals.length).fill(false);
+          let spanStart = 0;
+          for (let ri = 0; ri <= rowVals.length; ri++) {
+            const ended = ri === rowVals.length
+              || rowVals[ri].cells[ci] !== rowVals[spanStart].cells[ci]
+              || rowGroupInfo[ri] !== rowGroupInfo[spanStart];
+            if (ended) {
+              // show at middle row of span
+              const mid = Math.floor((spanStart + ri - 1) / 2);
+              result[mid] = true;
+              spanStart = ri;
+            }
+          }
+          return result;
+        });
+
+        const body = rowVals.map((row, ri) => {
+          const grp          = rowGroupInfo[ri];
+          const bg           = grp.bg;
+          const isFirst      = ri === grp.start;
+          const isLast       = ri === grp.end;
+          const OUTER        = [180, 180, 180];  // group outer border
+          const NONE         = bg;               // invisible = same as bg
+
+          return row.cells.map((val, ci) => ({
+            content: showAt[ci][ri] ? val : '',
+            styles: {
+              fillColor: bg,
+              textColor: [30, 30, 30],
+              valign: 'middle',
+              lineWidth: { top: isFirst ? 0.4 : 0, right: 0.4, bottom: isLast ? 0.4 : 0, left: 0.4 },
+              lineColor: OUTER,
+            },
           })).concat({
             content: 'Voir fiche',
-            styles: { textColor: [232,0,29], fontStyle: 'bold', fontSize: 7, halign: 'center' },
+            styles: {
+              fillColor: bg,
+              textColor: [210, 0, 20],
+              fontStyle: 'bold',
+              fontSize: 7,
+              halign: 'center',
+              valign: 'middle',
+              lineWidth: { top: isFirst ? 0.4 : 0, right: 0.4, bottom: isLast ? 0.4 : 0, left: 0.4 },
+              lineColor: OUTER,
+            },
             link: row.link,
-          })
-        );
+          });
+        });
 
         const colStyles = {};
         colStyles[cols.length] = { cellWidth: 20, halign: 'center' };
@@ -1481,40 +1537,31 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
           head,
           body,
           startY,
-          theme: 'striped',
+          theme: 'plain',
           styles: {
             fontSize: 7.5,
             cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
             overflow: 'ellipsize',
             textColor: [30, 30, 30],
-            lineColor: [230, 230, 230],
-            lineWidth: 0.15,
+            lineWidth: 0.25,
           },
           headStyles: {
-            fillColor: [245, 245, 245],
-            textColor: [70, 70, 70],
+            fillColor: [40, 40, 40],
+            textColor: [255, 255, 255],
             fontStyle: 'bold',
             fontSize: 7,
-            lineColor: [210, 210, 210],
-            lineWidth: 0.3,
+            lineWidth: 0,
           },
-          alternateRowStyles: { fillColor: [250, 250, 250] },
           columnStyles: colStyles,
           margin: { left: 8, right: 8 },
-          tableLineColor: [210, 210, 210],
+          tableLineColor: [200, 200, 200],
           tableLineWidth: 0.3,
           didDrawCell: (data) => {
-            const ci = data.column.index;
+            if (data.section !== 'body') return;
             const ri = data.row.index;
-            // Erase top border of merged cells by painting over it
-            if (data.section === 'body' && ci < cols.length && mergedCells[ci]?.[ri]) {
-              const bg = ri % 2 === 0 ? 255 : 250;
-              doc.setFillColor(bg, bg, bg);
-              doc.rect(data.cell.x + 0.1, data.cell.y - 0.1, data.cell.width - 0.2, 0.35, 'F');
-            }
-            // Clickable link
-            if (data.section === 'body' && ci === cols.length && data.cell.raw?.link) {
-              doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url: data.cell.raw.link });
+            const ci = data.column.index;
+            if (ci === cols.length && rowVals[ri]?.link) {
+              doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url: rowVals[ri].link });
             }
           },
         });
