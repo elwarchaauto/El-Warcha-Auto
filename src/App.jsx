@@ -449,7 +449,12 @@ const SearchPanel = ({filters, setFilters, cars=[]}) => {
 };
 
 const CarCard = ({car, settings, onClick}) => {
-  const dzd    = calcDZD(car.price_cny, settings, car.price_usd, car.price_currency);
+  const _carFob = parseFloat(car.price_fob)||0;
+  const _carShip = parseFloat(settings?.shipment_fee_usd)||0;
+  const _carTotal = _carFob > 0 ? _carFob + _carShip : (parseFloat(car.price_usd)||0);
+  const dzd    = _carTotal > 0 && settings?.usd_dzd_rate
+    ? Math.round(_carTotal * parseFloat(settings.usd_dzd_rate))
+    : calcDZD(car.price_cny, settings, car.price_usd, car.price_currency);
   const photos = car.photos||[];
   const eq     = car.car_equipment?.[0]||{};
   const eqList = Object.entries(EQUIPMENT_LABELS).filter(([k])=>eq[k]).map(([,v])=>v);
@@ -509,7 +514,9 @@ const CarCard = ({car, settings, onClick}) => {
       <div className="car-card-price" style={{width:148,flexShrink:0,borderLeft:"1px solid #e5e5e5",padding:"12px",display:"flex",flexDirection:"column",alignItems:"flex-end",justifyContent:"space-between",background:"#fafafa"}}>
         <div style={{textAlign:"right"}}>
           {car.price_fob&&<div style={{fontSize:9,color:"#0369a1",fontWeight:700,marginBottom:1}}>FOB ${new Intl.NumberFormat("fr-DZ").format(car.price_fob)}</div>}
-          <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:21,color:"#d36135",lineHeight:1}}>{car.price_usd?('$'+new Intl.NumberFormat('fr-DZ').format(Math.round(car.price_usd))):car.price_fob?('$'+new Intl.NumberFormat('fr-DZ').format(car.price_fob)):"—"}</div>
+          <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:21,color:"#d36135",lineHeight:1}}>
+            {(()=>{const f=parseFloat(car.price_fob)||0;const s=parseFloat(settings?.shipment_fee_usd)||0;const t=f>0?f+s:0;return t>0?'$'+new Intl.NumberFormat('fr-DZ').format(Math.round(t)):'—';})()}
+          </div>
           {dzd&&(
             <div style={{marginTop:5,padding:"4px 8px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:5}}>
               <div style={{fontSize:8,color:"#92400e",fontWeight:700}}>≈ DZD</div>
@@ -782,7 +789,13 @@ const CarDetailPage = ({car, settings, setPage, onDelete, onUpdate, showToast, d
   const [activePhoto, setActivePhoto] = useState(0);
   const [editing, setEditing] = useState(false);
   if (editing) return <EditCarPage car={car} settings={settings} setPage={setPage} dealers={dealers} onUpdate={u=>{onUpdate(u);setEditing(false);}} showToast={showToast} onCancel={()=>setEditing(false)}/>;
-  const dealer=car.dealers; const eq=car.car_equipment?.[0]||{}; const dzd=calcDZD(car.price_cny,settings,car.price_usd,car.price_currency); const photos=car.photos||[];
+  const dealer=car.dealers; const eq=car.car_equipment?.[0]||{}; const photos=car.photos||[];
+  const _detFob   = parseFloat(car.price_fob)||0;
+  const _detShip  = parseFloat(settings?.shipment_fee_usd)||0;
+  const _detTotal = _detFob > 0 ? _detFob + _detShip : (parseFloat(car.price_usd)||0);
+  const dzd = _detTotal > 0 && settings?.usd_dzd_rate
+    ? Math.round(_detTotal * parseFloat(settings.usd_dzd_rate))
+    : calcDZD(car.price_cny, settings, car.price_usd, car.price_currency);
   const specs=[{l:"Marque",v:car.brand},{l:"Modèle",v:car.model},{l:"Année",v:car.year},{l:"Version",v:car.trim},{l:"Carrosserie",v:car.body_type},{l:"Couleur",v:car.color},{l:"Origine",v:car.origin==="imported"?"Importé":"Local"},{l:"Kilométrage",v:car.mileage?fmt(car.mileage)+" km":null},{l:"Carburant",v:car.fuel_type},{l:"Transmission",v:car.transmission},{l:"Cylindrée",v:car.engine_size},{l:"Portes",v:car.doors}].filter(s=>s.v);
   return (
     <div style={{background:"#f2f2f2",minHeight:"100vh",paddingBottom:60}}>
@@ -846,10 +859,21 @@ const CarDetailPage = ({car, settings, setPage, onDelete, onUpdate, showToast, d
                 <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:22,color:"#0369a1",lineHeight:1}}>${new Intl.NumberFormat("fr-DZ").format(car.price_fob)}</div>
               </div>
             )}
-            <div style={{background:"#f2f2f2",borderRadius:8,padding:"11px 14px",marginBottom:8,borderLeft:"4px solid #d36135"}}>
-              <div style={{fontSize:9,color:"#9a9a9a",fontWeight:700,letterSpacing:".1em",marginBottom:2}}>PRIX TOTAL {car.price_fob?`(FOB + Transport $${parseFloat(settings?.shipment_fee_usd||0)})`:""}</div>
-              <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:28,color:"#d36135",lineHeight:1}}>{car.price_usd?`$${new Intl.NumberFormat("fr-DZ").format(Math.round(car.price_usd))}`:car.price_fob?`$${new Intl.NumberFormat("fr-DZ").format(car.price_fob)}`:"—"}</div>
-            </div>
+            {(()=>{
+              const _fob  = parseFloat(car.price_fob)||0;
+              const _ship = parseFloat(settings?.shipment_fee_usd)||0;
+              const _tot  = _fob > 0 ? _fob + _ship : 0;
+              return _tot > 0 ? (
+                <div style={{background:"#f2f2f2",borderRadius:8,padding:"11px 14px",marginBottom:8,borderLeft:"4px solid #d36135"}}>
+                  <div style={{fontSize:9,color:"#9a9a9a",fontWeight:700,letterSpacing:".1em",marginBottom:2}}>
+                    PRIX TOTAL (FOB ${new Intl.NumberFormat("fr-DZ").format(_fob)} + Transport ${_ship})
+                  </div>
+                  <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:28,color:"#d36135",lineHeight:1}}>
+                    ${new Intl.NumberFormat("fr-DZ").format(Math.round(_tot))}
+                  </div>
+                </div>
+              ) : null;
+            })()}
             {dzd&&<div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"10px 14px",marginBottom:12}}><div style={{fontSize:9,color:"#92400e",fontWeight:700,letterSpacing:".08em",marginBottom:2}}>ESTIMATION DZD</div><div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:20,color:"#92400e"}}>{fmt(dzd)} DZD</div><div style={{fontSize:9,color:"#b45309",marginTop:2}}>Transport · ${settings?.shipment_fee_usd} USD</div></div>}
             <div style={{display:"flex",gap:5,marginBottom:12,flexWrap:"wrap"}}><STag status={car.status}/><CTag condition={car.condition}/>{car.negotiable&&<span className="tag tgr">🏷️ Négociable</span>}</div>
             <div style={{display:"flex",gap:8}}>
