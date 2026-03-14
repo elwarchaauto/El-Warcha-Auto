@@ -61,7 +61,7 @@ const _deepLink = {
 const _hasDeepLink = Object.values(_deepLink).some(v => v !== '');
 
 const EMPTY_FILTERS = {brand:"",model:"",fuel:"",condition:"",status:"",color:"",body_type:"",yearMin:"",yearMax:"",mileageMax:300000,priceMax:500000,priceMaxUSD:50000,equipment:{}};
-const EMPTY_CAR     = {dealer_id:"",brand:"",model:"",year:"",trim:"",body_type:"",condition:"used",status:"available",mileage:"",origin:"imported",price_cny:"",price_usd:"",price_fob:"",price_currency:"CNY",negotiable:false,fuel_type:"",transmission:"",engine_size:"",color:"",doors:"",description:""};
+const EMPTY_CAR     = {dealer_id:"",brand:"",model:"",year:"",trim:"",body_type:"",condition:"used",status:"available",mileage:"",origin:"imported",price_fob:"",negotiable:false,fuel_type:"",transmission:"",engine_size:"",color:"",doors:"",description:""};
 const EMPTY_EQ      = Object.fromEntries(Object.keys(EQUIPMENT_LABELS).map(k=>[k,false]));
 
 const fmt    = n => n!=null ? new Intl.NumberFormat("fr-DZ").format(Math.round(n)) : "—";
@@ -121,33 +121,49 @@ select.f{appearance:auto;}
 @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
 @keyframes spin{from{transform:rotate(0);}to{transform:rotate(360deg);}}
 .au{animation:fadeUp .3s ease forwards;}
+.mobile-nav{display:none;}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:400;animation:fadeIn .2s ease;}
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:280px;background:#fff;z-index:401;box-shadow:4px 0 24px rgba(0,0,0,.18);display:flex;flex-direction:column;transform:translateX(-100%);transition:transform .28s cubic-bezier(.4,0,.2,1);}
+.sidebar.open{transform:translateX(0);}
 @media(max-width:900px){
   .nav-top{display:none!important;}
   .nav-search{display:none!important;}
+  .mobile-nav{display:flex!important;}
+  .sidebar-overlay{display:block;}
   .search-grid{grid-template-columns:1fr!important;}
   .detail-grid{grid-template-columns:1fr!important;}
   .sqlgen-grid{grid-template-columns:1fr!important;}
   .sqlgen-info{position:static!important;}
   .export-grid{grid-template-columns:1fr!important;}
+  .sticky-sidebar{position:static!important;}
+  .settings-grid{grid-template-columns:1fr!important;}
+  .stats-row{grid-template-columns:repeat(2,1fr)!important;}
 }
 @media(max-width:700px){
   .car-card{flex-direction:column!important;}
-  .car-card-photo{width:100%!important;min-height:200px!important;}
+  .car-card-photo{width:100%!important;min-height:180px!important;}
   .car-card-price{width:100%!important;border-left:none!important;border-top:1px solid #e5e5e5!important;flex-direction:row!important;justify-content:space-between!important;align-items:center!important;padding:10px 14px!important;}
   .filter-grid4{grid-template-columns:1fr 1fr!important;}
-  .nav-search{display:none!important;}
+  .filter-sliders{grid-template-columns:1fr!important;}
   .brand-grid{grid-template-columns:repeat(3,1fr)!important;}
   .specs-grid3{grid-template-columns:repeat(2,1fr)!important;}
   .eq-grid{grid-template-columns:repeat(2,1fr)!important;}
   .form-grid2{grid-template-columns:1fr!important;}
   .form-grid3{grid-template-columns:1fr!important;}
-  .page-wrap{padding:78px 12px 40px!important;}
+  .page-wrap{padding:120px 12px 40px!important;}
   .sqlgen-dealer-row{grid-template-columns:1fr!important;}
   .sqlgen-stats{grid-template-columns:repeat(2,1fr)!important;}
+  .dealer-form-row{grid-template-columns:1fr!important;}
+  .export-config-panel{display:none!important;}
+  .export-mobile-config{display:block!important;}
+  .hero-stats{display:none!important;}
 }
 @media(max-width:480px){
   .brand-grid{grid-template-columns:repeat(2,1fr)!important;}
-  .nav-main{padding:0 10px!important;}
+  .nav-main{padding:0 8px!important;}
+  .filter-grid4{grid-template-columns:1fr!important;}
+  .specs-grid3{grid-template-columns:1fr 1fr!important;}
+  .sqlgen-stats{grid-template-columns:1fr 1fr!important;}
 }
 `;
 
@@ -189,47 +205,121 @@ const BrandLogo = ({brand, size=28}) => {
   return <img src={"https://logo.clearbit.com/"+b.d} alt={brand} width={size} height={Math.round(size*.7)} style={{objectFit:"contain"}} onError={()=>setOk(false)}/>;
 };
 
-const Navbar = ({page, setPage, search, setSearch}) => (
-  <nav style={{background:"#fff",borderBottom:"3px solid #d36135",position:"fixed",top:0,left:0,right:0,zIndex:300,boxShadow:"0 2px 10px rgba(0,0,0,.08)"}}>
-    <div className="nav-top" style={{background:"#1c1c1c",padding:"4px 24px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-      <span style={{color:"#888",fontSize:11,fontWeight:600}}>📍 Algérie — Import direct Chine</span>
-      <div style={{display:"flex",gap:20}}>
-        {[{id:"home",l:"🚗 Voitures"},{id:"dealers",l:"🏢 Concessionnaires"},{id:"export",l:"📄 Export PDF"},{id:"sql-gen",l:"🛠 SQL Generator"},{id:"settings",l:"⚙️ Paramètres"}].map(item=>(
-          <button key={item.id} onClick={()=>setPage(item.id)} style={{background:"none",color:page===item.id?"#d36135":"#999",fontSize:11,fontWeight:700,padding:"2px 0",borderBottom:page===item.id?"1.5px solid #d36135":"1.5px solid transparent"}}>{item.l}</button>
-        ))}
-      </div>
-    </div>
-    <div className="nav-main" style={{padding:"0 24px",height:58,display:"flex",alignItems:"center",justifyContent:"space-between",gap:14}}>
-      <div style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",flexShrink:0}} onClick={()=>setPage("home")}>
-        <img
-          src="/logo.png"
-          alt="El Warcha Auto"
-          style={{height:44,width:"auto",objectFit:"contain",flexShrink:0}}
-          onError={e=>{e.target.style.display="none";e.target.nextSibling.style.display="flex";}}
-        />
-        <div style={{display:"none",width:36,height:36,background:"#d36135",borderRadius:6,alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0}}>🔧</div>
-        <div>
-          <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:19,lineHeight:1}}>EL WARCHA <span style={{color:"#d36135"}}>AUTO</span></div>
-          <div style={{fontSize:8,color:"#9a9a9a",fontWeight:700,letterSpacing:".1em"}}>IMPORT • VENTE • ALGÉRIE</div>
+const NAV_ITEMS = [
+  {id:"home",     icon:"🚗", l:"Voitures"},
+  {id:"dealers",  icon:"🏢", l:"Concessionnaires"},
+  {id:"export",   icon:"📄", l:"Export PDF"},
+  {id:"sql-gen",  icon:"🛠", l:"SQL Generator"},
+  {id:"settings", icon:"⚙️", l:"Paramètres"},
+];
+
+const Navbar = ({page, setPage, search, setSearch}) => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const navigate = id => { setPage(id); setSidebarOpen(false); };
+
+  return (
+    <>
+      <nav style={{background:"#fff",borderBottom:"3px solid #d36135",position:"fixed",top:0,left:0,right:0,zIndex:300,boxShadow:"0 2px 10px rgba(0,0,0,.08)"}}>
+        {/* Desktop top bar */}
+        <div className="nav-top" style={{background:"#1c1c1c",padding:"4px 24px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span style={{color:"#888",fontSize:11,fontWeight:600}}>📍 Algérie — Import direct Chine</span>
+          <div style={{display:"flex",gap:20}}>
+            {NAV_ITEMS.map(item=>(
+              <button key={item.id} onClick={()=>setPage(item.id)} style={{background:"none",color:page===item.id?"#d36135":"#999",fontSize:11,fontWeight:700,padding:"2px 0",borderBottom:page===item.id?"1.5px solid #d36135":"1.5px solid transparent"}}>{item.icon} {item.l}</button>
+            ))}
+          </div>
+        </div>
+        {/* Main nav bar */}
+        <div className="nav-main" style={{padding:"0 16px",height:58,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
+          {/* Logo */}
+          <div style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",flexShrink:0}} onClick={()=>navigate("home")}>
+            <img src="/logo.png" alt="El Warcha Auto"
+              style={{height:40,width:"auto",objectFit:"contain",flexShrink:0}}
+              onError={e=>{e.target.style.display="none";e.target.nextSibling.style.display="flex";}}/>
+            <div style={{display:"none",width:34,height:34,background:"#d36135",borderRadius:6,alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🔧</div>
+            <div>
+              <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:18,lineHeight:1}}>EL WARCHA <span style={{color:"#d36135"}}>AUTO</span></div>
+              <div style={{fontSize:8,color:"#9a9a9a",fontWeight:700,letterSpacing:".1em"}}>IMPORT • VENTE • ALGÉRIE</div>
+            </div>
+          </div>
+          {/* Desktop search */}
+          <div className="nav-search" style={{flex:1,maxWidth:440,position:"relative"}}>
+            <input className="f" placeholder="🔍  Marque, modèle, année..." value={search} onChange={e=>setSearch(e.target.value)}
+              onKeyDown={e=>{if(e.key==="Enter"&&page!=="home")setPage("home");}}
+              style={{borderRadius:20,paddingRight:search?32:16,fontSize:13,borderColor:"#e5e5e5",height:34}}/>
+            {search&&<button onClick={()=>setSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:"#9a9a9a",fontSize:13,padding:2}}>✕</button>}
+          </div>
+          {/* Right side */}
+          <div style={{display:"flex",gap:8,flexShrink:0,alignItems:"center"}}>
+            <button className="btn-red" onClick={()=>navigate("add-car")} style={{fontSize:12,padding:"7px 14px"}}>+ Voiture</button>
+            {/* Hamburger — mobile only */}
+            <button className="mobile-nav" onClick={()=>setSidebarOpen(true)}
+              style={{flexDirection:"column",gap:4,background:"none",border:"none",padding:"6px",cursor:"pointer",borderRadius:6}}>
+              <span style={{display:"block",width:22,height:2,background:"#1c1c1c",borderRadius:2}}/>
+              <span style={{display:"block",width:22,height:2,background:"#1c1c1c",borderRadius:2}}/>
+              <span style={{display:"block",width:22,height:2,background:"#1c1c1c",borderRadius:2}}/>
+            </button>
+          </div>
+        </div>
+        {/* Mobile search bar below nav */}
+        <div className="mobile-nav" style={{padding:"8px 14px 10px",borderTop:"1px solid #f0f0f0"}}>
+          <div style={{position:"relative",width:"100%"}}>
+            <input className="f" placeholder="🔍  Rechercher..." value={search} onChange={e=>setSearch(e.target.value)}
+              onKeyDown={e=>{if(e.key==="Enter"&&page!=="home")setPage("home");}}
+              style={{borderRadius:20,paddingRight:search?32:16,fontSize:13,borderColor:"#e5e5e5",height:36}}/>
+            {search&&<button onClick={()=>setSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:"#9a9a9a",fontSize:13,padding:2}}>✕</button>}
+          </div>
+        </div>
+      </nav>
+
+      {/* Sidebar overlay */}
+      {sidebarOpen&&<div className="sidebar-overlay" onClick={()=>setSidebarOpen(false)}/>}
+
+      {/* Sidebar drawer */}
+      <div className={"sidebar"+(sidebarOpen?" open":"")}>
+        {/* Sidebar header */}
+        <div style={{background:"#1c1c1c",padding:"16px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{width:32,height:32,background:"#d36135",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,flexShrink:0}}>🔧</div>
+            <div>
+              <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:17,color:"#fff",lineHeight:1}}>EL WARCHA <span style={{color:"#d36135"}}>AUTO</span></div>
+              <div style={{fontSize:9,color:"#888",fontWeight:700,letterSpacing:".08em"}}>IMPORT • VENTE • ALGÉRIE</div>
+            </div>
+          </div>
+          <button onClick={()=>setSidebarOpen(false)} style={{background:"rgba(255,255,255,.1)",border:"none",color:"#fff",width:30,height:30,borderRadius:6,fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>✕</button>
+        </div>
+
+        {/* Nav items */}
+        <div style={{flex:1,overflowY:"auto",padding:"12px 10px"}}>
+          {NAV_ITEMS.map(item=>{
+            const active = page===item.id;
+            return (
+              <button key={item.id} onClick={()=>navigate(item.id)}
+                style={{width:"100%",display:"flex",alignItems:"center",gap:14,padding:"13px 14px",borderRadius:10,border:"none",background:active?"#fff0f0":"transparent",color:active?"#d36135":"#333",fontFamily:"'Barlow',sans-serif",fontSize:14,fontWeight:active?700:500,cursor:"pointer",marginBottom:4,textAlign:"left",transition:"background .15s"}}>
+                <span style={{fontSize:20,flexShrink:0}}>{item.icon}</span>
+                <span>{item.l}</span>
+                {active&&<span style={{marginLeft:"auto",width:6,height:6,background:"#d36135",borderRadius:"50%",flexShrink:0}}/>}
+              </button>
+            );
+          })}
+
+          <div style={{borderTop:"1px solid #f0f0f0",margin:"12px 0"}}/>
+
+          <button onClick={()=>navigate("add-car")}
+            style={{width:"100%",display:"flex",alignItems:"center",gap:14,padding:"13px 14px",borderRadius:10,border:"none",background:"#d36135",color:"#fff",fontFamily:"'Barlow',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",textAlign:"left"}}>
+            <span style={{fontSize:20,flexShrink:0}}>➕</span>
+            <span>Ajouter une voiture</span>
+          </button>
+        </div>
+
+        {/* Sidebar footer */}
+        <div style={{padding:"14px 20px",borderTop:"1px solid #f0f0f0",flexShrink:0}}>
+          <p style={{fontSize:10,color:"#bbb",fontWeight:600,letterSpacing:".06em",textAlign:"center"}}>EL WARCHA AUTO © 2025</p>
         </div>
       </div>
-      <div className="nav-search" style={{flex:1,maxWidth:440,position:"relative"}}>
-        <input className="f" placeholder="🔍  Marque, modèle, année..." value={search} onChange={e=>setSearch(e.target.value)}
-          onKeyDown={e=>{if(e.key==="Enter"&&page!=="home")setPage("home");}}
-          style={{borderRadius:20,paddingRight:search?32:16,fontSize:13,borderColor:"#e5e5e5",height:34}}/>
-        {search&&<button onClick={()=>setSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:"#9a9a9a",fontSize:13,padding:2}}>✕</button>}
-      </div>
-      <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
-        <div className="mobile-nav" style={{gap:4}}>
-          {[{id:"home",l:"🚗"},{id:"dealers",l:"🏢"},{id:"export",l:"📄"},{id:"sql-gen",l:"🛠"},{id:"settings",l:"⚙️"}].map(item=>(
-            <button key={item.id} onClick={()=>setPage(item.id)} style={{background:page===item.id?"#d36135":"#f2f2f2",color:page===item.id?"#fff":"#555",border:"none",borderRadius:6,padding:"6px 9px",fontSize:15,transition:"all .18s"}}>{item.l}</button>
-          ))}
-        </div>
-        <button className="btn-red" onClick={()=>setPage("add-car")} style={{fontSize:12,padding:"7px 12px"}}>+ Voiture</button>
-      </div>
-    </div>
-  </nav>
-);
+    </>
+  );
+};
 
 const SearchPanel = ({filters, setFilters, cars=[]}) => {
   const [draft, setDraft] = useState({...filters});
@@ -296,7 +386,7 @@ const SearchPanel = ({filters, setFilters, cars=[]}) => {
                 <option value="">Toutes</option>{COLORS_LIST.map(c=><option key={c}>{c}</option>)}
               </select></div>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14,marginBottom:10}}>
+          <div className="filter-sliders" style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14,marginBottom:10}}>
             <div><label className="lbl">Km max: <b>{fmt(draft.mileageMax||300000)} km</b></label>
               <input type="range" min={0} max={300000} step={5000} value={draft.mileageMax||300000} onChange={e=>setDraft(f=>({...f,mileageMax:+e.target.value}))} style={{width:"100%",accentColor:"#d36135"}}/></div>
             <div><label className="lbl">Prix max CNY: <b>{fmtCNY(draft.priceMax||500000)}</b></label>
@@ -418,7 +508,8 @@ const CarCard = ({car, settings, onClick}) => {
       </div>
       <div className="car-card-price" style={{width:148,flexShrink:0,borderLeft:"1px solid #e5e5e5",padding:"12px",display:"flex",flexDirection:"column",alignItems:"flex-end",justifyContent:"space-between",background:"#fafafa"}}>
         <div style={{textAlign:"right"}}>
-          <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:21,color:"#d36135",lineHeight:1}}>{car.price_currency==='USD'?('$'+new Intl.NumberFormat('fr-DZ').format(Math.round(car.price_usd||0))):fmtCNY(car.price_cny)}</div>
+          {car.price_fob&&<div style={{fontSize:9,color:"#0369a1",fontWeight:700,marginBottom:1}}>FOB ${new Intl.NumberFormat("fr-DZ").format(car.price_fob)}</div>}
+          <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:21,color:"#d36135",lineHeight:1}}>{car.price_usd?('$'+new Intl.NumberFormat('fr-DZ').format(Math.round(car.price_usd))):car.price_fob?('$'+new Intl.NumberFormat('fr-DZ').format(car.price_fob)):"—"}</div>
           {dzd&&(
             <div style={{marginTop:5,padding:"4px 8px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:5}}>
               <div style={{fontSize:8,color:"#92400e",fontWeight:700}}>≈ DZD</div>
@@ -426,7 +517,6 @@ const CarCard = ({car, settings, onClick}) => {
             </div>
           )}
         </div>
-        {car.price_fob&&<div style={{fontSize:9,background:"#f0f9ff",color:"#0369a1",fontWeight:700,padding:"2px 6px",borderRadius:3,border:"1px solid #bae6fd",marginBottom:3}}>FOB ${new Intl.NumberFormat("fr-DZ").format(car.price_fob)}</div>}
         <div style={{fontSize:9,color:"#9a9a9a",fontWeight:600}}>{new Date(car.created_at||Date.now()).toLocaleDateString("fr-DZ")}</div>
       </div>
     </div>
@@ -463,7 +553,7 @@ const HomePage = ({cars, settings, loading, setPage, setSelectedCar, search, set
             <h1 style={{fontSize:28,fontWeight:900,lineHeight:1,marginBottom:3}}>EL WARCHA <span style={{color:"#d36135"}}>AUTO</span></h1>
             <p style={{color:"#999",fontSize:12}}>Import direct depuis la Chine — Algérie</p>
           </div>
-          <div style={{display:"flex",gap:18,flexShrink:0}}>
+          <div className="hero-stats" style={{display:"flex",gap:18,flexShrink:0}}>
             {stats.map(s=>(
               <div key={s.l} style={{textAlign:"center"}}>
                 <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:24,color:"#d36135",lineHeight:1}}>{s.n}</div>
@@ -540,35 +630,19 @@ const Sec = ({title,children}) => (
 const CarForm = ({initial, initialEq, dealers, settings, onSubmit, onCancel, submitLabel, loading}) => {
   const [form, setForm] = useState(initial);
   const [eq,   setEq]   = useState(initialEq);
-  const [priceCur, setPriceCur] = useState(initial.price_currency || 'CNY');
   // Each entry: {src: string (dataURL or http URL), file: File|null}
   const [photos, setPhotos] = useState(
     (initial._existingPhotos||[]).map(url=>({src:url, file:null}))
   );
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}));
 
-  // Price input: CNY stores in price_cny, USD stores in price_usd
-  const handlePriceInput = e => {
-    const val = e.target.value;
-    if (priceCur === 'CNY') {
-      setForm(f => ({...f, price_cny: val, price_usd: null, price_currency: 'CNY'}));
-    } else {
-      setForm(f => ({...f, price_usd: val, price_cny: null, price_currency: 'USD'}));
-    }
-  };
-  const priceInputVal = priceCur === 'CNY' ? (form.price_cny||'') : (form.price_usd||'');
-
-  // Live DZD preview
-  const previewDZD = priceCur === 'CNY'
-    ? calcDZD(parseFloat(form.price_cny)||0, settings)
-    : calcDZD(null, settings, parseFloat(form.price_usd)||0, 'USD');
-
-  // Show equivalent in the other currency
-  const priceEquiv = priceCur === 'CNY' && form.price_cny && settings?.cny_usd_rate
-    ? `≈ $${(parseFloat(form.price_cny) * parseFloat(settings.cny_usd_rate)).toFixed(0)} USD`
-    : priceCur === 'USD' && form.price_usd && settings?.cny_usd_rate
-    ? `≈ ¥${new Intl.NumberFormat("zh-CN").format(Math.round(parseFloat(form.price_usd) / parseFloat(settings.cny_usd_rate)))} CNY`
-    : null;
+  // Prix total = FOB + frais de transport
+  const fobVal    = parseFloat(form.price_fob) || 0;
+  const shipFee   = parseFloat(settings?.shipment_fee_usd) || 0;
+  const totalUSD  = fobVal > 0 ? fobVal + shipFee : 0;
+  const previewDZD = totalUSD > 0 && settings?.usd_dzd_rate
+    ? Math.round(totalUSD * parseFloat(settings.usd_dzd_rate))
+    : 0;
 
   const addPhoto = (file, dataUrl) => setPhotos(p=>[...p,{src:dataUrl, file}]);
   const removePhoto = i => setPhotos(p=>p.filter((_,idx)=>idx!==i));
@@ -607,26 +681,28 @@ const CarForm = ({initial, initialEq, dealers, settings, onSubmit, onCancel, sub
         </label>
       </Sec>
       <Sec title="Prix">
-        <div style={{display:"flex",gap:0,borderRadius:8,overflow:"hidden",border:"1.5px solid #ddd",width:"fit-content"}}>
-          {[{v:"CNY",l:"¥ Yuan (CNY)"},{v:"USD",l:"$ Dollar (USD)"}].map(cur=>(
-            <button key={cur.v} type="button" onClick={()=>{setPriceCur(cur.v);setForm(f=>({...f,price_currency:cur.v,price_cny:null,price_usd:null}));}}
-              style={{padding:"8px 24px",fontWeight:700,fontSize:13,border:"none",background:priceCur===cur.v?"#d36135":"#fff",color:priceCur===cur.v?"#fff":"#555",transition:"all .18s",cursor:"pointer"}}>
-              {cur.l}
-            </button>
-          ))}
-        </div>
-        <FF label={priceCur==="CNY"?"Prix en Yuan ¥":"Prix en Dollar $"}>
-          <input className="f" type="number" value={priceInputVal} onChange={handlePriceInput}
-            placeholder={priceCur==="CNY"?"ex: 150 000 ¥":"ex: 20 000 $"}/>
+        <FF label="Prix FOB ($) — Free On Board" required>
+          <input className="f" type="number" value={form.price_fob||''} onChange={set("price_fob")} placeholder="ex: 7500"/>
         </FF>
-        {priceEquiv&&<div style={{fontSize:11,color:"#9a9a9a",fontWeight:600,marginTop:-4}}>{priceEquiv}</div>}
-        <FF label="Prix FOB (optionnel $)">
-          <input className="f" type="number" value={form.price_fob||''} onChange={set("price_fob")} placeholder="ex: 7300 (Free On Board)"/>
-        </FF>
-        {previewDZD>0&&(
-          <div style={{padding:"9px 13px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <span style={{fontSize:12,color:"#92400e",fontWeight:700}}>Estimation DZD :</span>
-            <span style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:16,color:"#92400e"}}>{fmt(previewDZD)} DZD</span>
+        {fobVal>0&&(
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 13px",background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8}}>
+              <div>
+                <div style={{fontSize:9,color:"#0369a1",fontWeight:700,letterSpacing:".08em",marginBottom:1}}>PRIX FOB</div>
+                <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:18,color:"#0369a1"}}>${new Intl.NumberFormat("fr-DZ").format(fobVal)}</div>
+              </div>
+              <div style={{textAlign:"right"}}>
+                <div style={{fontSize:9,color:"#9a9a9a",fontWeight:600}}>+ Transport ${shipFee}</div>
+                <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:22,color:"#d36135"}}>${new Intl.NumberFormat("fr-DZ").format(Math.round(totalUSD))}</div>
+                <div style={{fontSize:9,color:"#9a9a9a",fontWeight:600}}>PRIX TOTAL USD</div>
+              </div>
+            </div>
+            {previewDZD>0&&(
+              <div style={{padding:"9px 13px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <span style={{fontSize:12,color:"#92400e",fontWeight:700}}>≈ Estimation DZD</span>
+                <span style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:16,color:"#92400e"}}>{fmt(previewDZD)} DZD</span>
+              </div>
+            )}
           </div>
         )}
       </Sec>
@@ -668,10 +744,12 @@ const AddCarPage = ({dealers, settings, setPage, onAdd, showToast}) => {
         ...form,
         year: parseInt(form.year)||null,
         mileage: parseInt(form.mileage)||null,
-        price_cny: form.price_currency==='CNY' ? parseFloat(form.price_cny)||null : null,
-        price_usd: form.price_currency==='USD' ? parseFloat(form.price_usd)||null : null,
         price_fob: parseFloat(form.price_fob)||null,
-        price_currency: form.price_currency||'CNY',
+        price_usd: form.price_fob && settings?.shipment_fee_usd !== undefined
+          ? (parseFloat(form.price_fob)||0) + (parseFloat(settings.shipment_fee_usd)||0)
+          : parseFloat(form.price_fob)||null,
+        price_currency: 'USD',
+        price_cny: null,
         doors: parseInt(form.doors)||null,
         photos: [],
       };
@@ -756,17 +834,22 @@ const CarDetailPage = ({car, settings, setPage, onDelete, onUpdate, showToast, d
           </div>
           {car.description&&<div className="card" style={{padding:18}}><h3 style={{fontSize:16,fontWeight:800,marginBottom:10,paddingBottom:8,borderBottom:"2px solid #e5e5e5"}}>Description</h3><p style={{color:"#555",lineHeight:1.75,fontSize:13}}>{car.description}</p></div>}
         </div>
-        <div style={{display:"flex",flexDirection:"column",gap:12,position:"sticky",top:100}}>
+        <div className="sticky-sidebar" style={{display:"flex",flexDirection:"column",gap:12,position:"sticky",top:100}}>
           <div className="card" style={{padding:18}}>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
               <div style={{width:42,height:42,background:"#f2f2f2",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><BrandLogo brand={car.brand} size={34}/></div>
               <div><h1 style={{fontSize:21,fontWeight:900,lineHeight:1.1}}>{car.year} {car.brand} {car.model}</h1>{car.trim&&<p style={{color:"#9a9a9a",fontSize:11,fontWeight:600}}>{car.trim}</p>}</div>
             </div>
+            {car.price_fob&&(
+              <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"10px 14px",marginBottom:8}}>
+                <div style={{fontSize:9,color:"#0369a1",fontWeight:700,letterSpacing:".08em",marginBottom:2}}>PRIX FOB</div>
+                <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:22,color:"#0369a1",lineHeight:1}}>${new Intl.NumberFormat("fr-DZ").format(car.price_fob)}</div>
+              </div>
+            )}
             <div style={{background:"#f2f2f2",borderRadius:8,padding:"11px 14px",marginBottom:8,borderLeft:"4px solid #d36135"}}>
-              <div style={{fontSize:9,color:"#9a9a9a",fontWeight:700,letterSpacing:".1em",marginBottom:2}}>PRIX</div>
-              <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:28,color:"#d36135",lineHeight:1}}>{car.price_currency==='USD'?('$ '+new Intl.NumberFormat('fr-DZ').format(Math.round(car.price_usd||0))):fmtCNY(car.price_cny)}</div>
+              <div style={{fontSize:9,color:"#9a9a9a",fontWeight:700,letterSpacing:".1em",marginBottom:2}}>PRIX TOTAL {car.price_fob?`(FOB + Transport $${parseFloat(settings?.shipment_fee_usd||0)})`:""}</div>
+              <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:28,color:"#d36135",lineHeight:1}}>{car.price_usd?`$${new Intl.NumberFormat("fr-DZ").format(Math.round(car.price_usd))}`:car.price_fob?`$${new Intl.NumberFormat("fr-DZ").format(car.price_fob)}`:"—"}</div>
             </div>
-            {car.price_fob&&<div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"9px 14px",marginBottom:8}}><div style={{fontSize:9,color:"#0369a1",fontWeight:700,letterSpacing:".08em",marginBottom:2}}>PRIX FOB</div><div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:18,color:"#0369a1"}}>${new Intl.NumberFormat("fr-DZ").format(car.price_fob)}</div></div>}
             {dzd&&<div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"10px 14px",marginBottom:12}}><div style={{fontSize:9,color:"#92400e",fontWeight:700,letterSpacing:".08em",marginBottom:2}}>ESTIMATION DZD</div><div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:20,color:"#92400e"}}>{fmt(dzd)} DZD</div><div style={{fontSize:9,color:"#b45309",marginTop:2}}>Transport · ${settings?.shipment_fee_usd} USD</div></div>}
             <div style={{display:"flex",gap:5,marginBottom:12,flexWrap:"wrap"}}><STag status={car.status}/><CTag condition={car.condition}/>{car.negotiable&&<span className="tag tgr">🏷️ Négociable</span>}</div>
             <div style={{display:"flex",gap:8}}>
@@ -793,7 +876,7 @@ const EditCarPage = ({car, settings, setPage, onUpdate, showToast, onCancel, dea
   const [loading, setLoading] = useState(false);
   const initialForm = {
     _existingPhotos: car.photos||[],
-    price_usd: car.price_usd||"", price_currency: car.price_currency||"CNY",
+    price_fob: car.price_fob||"",
     dealer_id: car.dealer_id||"",
     brand: car.brand||"", model: car.model||"", year: car.year||"",
     trim: car.trim||"", body_type: car.body_type||"",
@@ -813,9 +896,12 @@ const EditCarPage = ({car, settings, setPage, onUpdate, showToast, onCancel, dea
       delete data._existingPhotos;
       data.year = parseInt(data.year)||null;
       data.mileage = parseInt(data.mileage)||null;
-      data.price_cny = data.price_currency==='CNY' ? parseFloat(data.price_cny)||null : null;
-      data.price_usd = data.price_currency==='USD' ? parseFloat(data.price_usd)||null : null;
       data.price_fob = parseFloat(data.price_fob)||null;
+      data.price_usd = data.price_fob && settings?.shipment_fee_usd !== undefined
+        ? (data.price_fob) + (parseFloat(settings.shipment_fee_usd)||0)
+        : data.price_fob||null;
+      data.price_cny = null;
+      data.price_currency = 'USD';
       data.doors = parseInt(data.doors)||null;
       // Keep existing http URLs that weren't removed, then append new uploads
       const existingUrls = allPreviews.filter(p => typeof p==="string" && p.startsWith("http"));
@@ -933,7 +1019,7 @@ const AddDealerPage = ({setPage, onAdd, showToast}) => {
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
         <Sec title="Informations">
           <FF label="Nom" required><input className="f" value={form.name} onChange={set("name")} placeholder="Ahmed Auto Alger"/></FF>
-          <div className="form-grid2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div className="dealer-form-row form-grid2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <FF label="Téléphone"><input className="f" value={form.mobile} onChange={set("mobile")} placeholder="+213 770..."/></FF>
             <FF label="Email"><input className="f" type="email" value={form.email} onChange={set("email")} placeholder="contact@..."/></FF>
           </div>
@@ -976,7 +1062,7 @@ const EditDealerPage = ({dealer, setPage, onUpdate, showToast}) => {
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
         <Sec title="Informations">
           <FF label="Nom" required><input className="f" value={form.name} onChange={set("name")} placeholder="Ahmed Auto Alger"/></FF>
-          <div className="form-grid2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div className="dealer-form-row form-grid2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <FF label="Téléphone"><input className="f" value={form.mobile} onChange={set("mobile")} placeholder="+213 770..."/></FF>
             <FF label="Email"><input className="f" type="email" value={form.email} onChange={set("email")} placeholder="contact@..."/></FF>
           </div>
@@ -1029,7 +1115,7 @@ const SettingsPage = ({settings, setSettings, showToast}) => {
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
         <Sec title="Taux de change — saisie manuelle">
           <p style={{fontSize:12,color:"#9a9a9a",marginBottom:4}}>Définissez vos propres taux. Ces valeurs sont utilisées pour toutes les conversions de prix.</p>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div className="settings-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <FF label="1 Yuan (CNY) = ? Dollar (USD)">
               <input className="f" type="number" step="0.000001" value={form.cny_usd_rate} onChange={set("cny_usd_rate")} placeholder="ex: 0.138000"/>
             </FF>
@@ -1046,7 +1132,7 @@ const SettingsPage = ({settings, setSettings, showToast}) => {
         </Sec>
         {(previewCNY||previewUSD)&&(
           <Sec title="Aperçu des formules">
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <div className="settings-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               {previewCNY&&(
                 <div style={{background:"#f8f8f8",borderRadius:8,padding:"12px 14px",border:"1px solid #e5e5e5"}}>
                   <div style={{fontSize:10,color:"#9a9a9a",fontWeight:700,marginBottom:4}}>¥100 000 CNY →</div>
@@ -1139,6 +1225,53 @@ const getFieldVal = (car, key, settings=null) => {
   if (key === "price_fob") return "FOB $" + new Intl.NumberFormat("fr-DZ").format(Math.round(v));
   return String(v);
 };
+
+const MobileExportConfig = ({groupBy, setGroupBy, sortBy, setSortBy, sortDir, setSortDir, selFields, toggleField}) => {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <>
+      <button className="btn-out" onClick={()=>setOpen(!open)} style={{fontSize:12}}>⚙️ Options</button>
+      {open && (
+        <div style={{position:"fixed",inset:0,zIndex:500,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"flex-end"}} onClick={e=>{if(e.target===e.currentTarget)setOpen(false);}}>
+          <div style={{background:"#fff",width:"100%",maxHeight:"80vh",overflowY:"auto",borderRadius:"16px 16px 0 0",padding:20}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+              <span style={{fontSize:15,fontWeight:800}}>Options d'export</span>
+              <button onClick={()=>setOpen(false)} style={{background:"none",border:"none",fontSize:20,color:"#9a9a9a"}}>✕</button>
+            </div>
+            <div style={{marginBottom:14}}>
+              <label className="lbl">Grouper par</label>
+              <select className="f" value={groupBy} onChange={e=>setGroupBy(e.target.value)}>
+                {GROUP_OPTIONS.map(o=><option key={o.k} value={o.k}>{o.l}</option>)}
+              </select>
+            </div>
+            <div style={{marginBottom:14}}>
+              <label className="lbl">Trier par</label>
+              <select className="f" value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{marginBottom:8}}>
+                {SORT_OPTIONS.map(o=><option key={o.k} value={o.k}>{o.l}</option>)}
+              </select>
+              <div style={{display:"flex",gap:0,borderRadius:8,overflow:"hidden",border:"1.5px solid #ddd"}}>
+                {[{v:"asc",l:"⬆ Croissant"},{v:"desc",l:"⬇ Décroissant"}].map(d=>(
+                  <button key={d.v} onClick={()=>setSortDir(d.v)} style={{flex:1,padding:"8px 4px",fontSize:12,fontWeight:700,border:"none",background:sortDir===d.v?"#1c1c1c":"#fff",color:sortDir===d.v?"#fff":"#555",cursor:"pointer"}}>{d.l}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="lbl" style={{marginBottom:8}}>Colonnes PDF</label>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5}}>
+                {EXPORT_FIELDS.map(f=>(
+                  <label key={f.k} style={{display:"flex",alignItems:"center",gap:6,fontSize:12,fontWeight:600,cursor:"pointer",padding:"5px 8px",borderRadius:5,background:selFields.includes(f.k)?"#f0fdf4":"#f9f9f9",border:"1px solid "+(selFields.includes(f.k)?"#a7f3d0":"#e5e5e5")}}>
+                    <input type="checkbox" checked={selFields.includes(f.k)} onChange={()=>toggleField(f.k)} style={{accentColor:"#d36135",width:13,height:13}}/>{f.l}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
 
 const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
   const BASE_URL = window.location.origin;
@@ -1291,9 +1424,12 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
           <h1 style={{fontSize:24,fontWeight:900}}>📄 Export PDF</h1>
           <p style={{color:"#9a9a9a",fontSize:13}}>{totalCars} véhicule{totalCars!==1?"s":""} sélectionné{totalCars!==1?"s":""}</p>
         </div>
-        <button className="btn-red" onClick={exportPDF} disabled={printing||totalCars===0} style={{fontSize:13,padding:"10px 24px"}}>
-          {printing?"⏳ Génération...":"📥 Exporter PDF"}
-        </button>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          <MobileExportConfig groupBy={groupBy} setGroupBy={setGroupBy} sortBy={sortBy} setSortBy={setSortBy} sortDir={sortDir} setSortDir={setSortDir} selFields={selFields} toggleField={toggleField}/>
+          <button className="btn-red" onClick={exportPDF} disabled={printing||totalCars===0} style={{fontSize:13,padding:"10px 24px"}}>
+            {printing?"⏳ Génération...":"📥 Exporter PDF"}
+          </button>
+        </div>
       </div>
 
       <div className="export-grid" style={{display:"grid",gridTemplateColumns:"1fr 340px",gap:14,alignItems:"start"}}>
@@ -1337,7 +1473,7 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
         </div>
 
         {/* Config panel */}
-        <div style={{display:"flex",flexDirection:"column",gap:12,position:"sticky",top:96}}>
+        <div className="sticky-sidebar" style={{display:"flex",flexDirection:"column",gap:12,position:"sticky",top:96}}>
           <div className="card" style={{padding:16}}>
             <h3 style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:".06em",marginBottom:12,paddingBottom:8,borderBottom:"1px solid #e5e5e5"}}>🗂 Grouper par</h3>
             <select className="f" value={groupBy} onChange={e=>setGroupBy(e.target.value)} style={{fontSize:13}}>
