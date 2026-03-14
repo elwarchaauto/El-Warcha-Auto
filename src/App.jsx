@@ -60,7 +60,7 @@ const _deepLink = {
 };
 const _hasDeepLink = Object.values(_deepLink).some(v => v !== '');
 
-const EMPTY_FILTERS = {brand:"",fuel:"",condition:"",status:"",color:"",body_type:"",yearMin:"",yearMax:"",mileageMax:300000,priceMax:500000,equipment:{}};
+const EMPTY_FILTERS = {brand:"",model:"",fuel:"",condition:"",status:"",color:"",body_type:"",yearMin:"",yearMax:"",mileageMax:300000,priceMax:500000,priceMaxUSD:50000,equipment:{}};
 const EMPTY_CAR     = {dealer_id:"",brand:"",model:"",year:"",trim:"",body_type:"",condition:"used",status:"available",mileage:"",origin:"imported",price_cny:"",price_usd:"",price_fob:"",price_currency:"CNY",negotiable:false,fuel_type:"",transmission:"",engine_size:"",color:"",doors:"",description:""};
 const EMPTY_EQ      = Object.fromEntries(Object.keys(EQUIPMENT_LABELS).map(k=>[k,false]));
 
@@ -91,7 +91,7 @@ const getUSD = (car, s) => {
 const G = `
 @import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@600;700;800;900&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-:root{--red:#e8001d;--red2:#c0001a;--dark:#1c1c1c;--gray:#f2f2f2;--gray2:#e5e5e5;--gray4:#9a9a9a;--border:#ddd;--text:#1c1c1c;--text2:#555;}
+:root{--red:#d36135;--red2:#c0001a;--dark:#1c1c1c;--gray:#f2f2f2;--gray2:#e5e5e5;--gray4:#9a9a9a;--border:#ddd;--text:#1c1c1c;--text2:#555;}
 body{font-family:'Barlow',sans-serif;background:var(--gray);color:var(--text);min-height:100vh;}
 h1,h2,h3,h4{font-family:'Barlow Condensed',sans-serif;}
 ::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:#ebebeb;}::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px;}
@@ -135,6 +135,7 @@ select.f{appearance:auto;}
   .car-card-photo{width:100%!important;min-height:200px!important;}
   .car-card-price{width:100%!important;border-left:none!important;border-top:1px solid #e5e5e5!important;flex-direction:row!important;justify-content:space-between!important;align-items:center!important;padding:10px 14px!important;}
   .filter-grid4{grid-template-columns:1fr 1fr!important;}
+  .nav-search{display:none!important;}
   .brand-grid{grid-template-columns:repeat(3,1fr)!important;}
   .specs-grid3{grid-template-columns:repeat(2,1fr)!important;}
   .eq-grid{grid-template-columns:repeat(2,1fr)!important;}
@@ -164,7 +165,7 @@ const CarSVG = ({size=80}) => (
 
 const Spinner = () => (
   <div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:80}}>
-    <div style={{width:32,height:32,border:"3px solid #e5e5e5",borderTopColor:"#e8001d",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
+    <div style={{width:32,height:32,border:"3px solid #e5e5e5",borderTopColor:"#d36135",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
   </div>
 );
 
@@ -189,12 +190,12 @@ const BrandLogo = ({brand, size=28}) => {
 };
 
 const Navbar = ({page, setPage, search, setSearch}) => (
-  <nav style={{background:"#fff",borderBottom:"3px solid #e8001d",position:"fixed",top:0,left:0,right:0,zIndex:300,boxShadow:"0 2px 10px rgba(0,0,0,.08)"}}>
+  <nav style={{background:"#fff",borderBottom:"3px solid #d36135",position:"fixed",top:0,left:0,right:0,zIndex:300,boxShadow:"0 2px 10px rgba(0,0,0,.08)"}}>
     <div className="nav-top" style={{background:"#1c1c1c",padding:"4px 24px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <span style={{color:"#888",fontSize:11,fontWeight:600}}>📍 Algérie — Import direct Chine</span>
       <div style={{display:"flex",gap:20}}>
         {[{id:"home",l:"🚗 Voitures"},{id:"dealers",l:"🏢 Concessionnaires"},{id:"export",l:"📄 Export PDF"},{id:"sql-gen",l:"🛠 SQL Generator"},{id:"settings",l:"⚙️ Paramètres"}].map(item=>(
-          <button key={item.id} onClick={()=>setPage(item.id)} style={{background:"none",color:page===item.id?"#e8001d":"#999",fontSize:11,fontWeight:700,padding:"2px 0",borderBottom:page===item.id?"1.5px solid #e8001d":"1.5px solid transparent"}}>{item.l}</button>
+          <button key={item.id} onClick={()=>setPage(item.id)} style={{background:"none",color:page===item.id?"#d36135":"#999",fontSize:11,fontWeight:700,padding:"2px 0",borderBottom:page===item.id?"1.5px solid #d36135":"1.5px solid transparent"}}>{item.l}</button>
         ))}
       </div>
     </div>
@@ -206,9 +207,9 @@ const Navbar = ({page, setPage, search, setSearch}) => (
           style={{height:44,width:"auto",objectFit:"contain",flexShrink:0}}
           onError={e=>{e.target.style.display="none";e.target.nextSibling.style.display="flex";}}
         />
-        <div style={{display:"none",width:36,height:36,background:"#e8001d",borderRadius:6,alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0}}>🔧</div>
+        <div style={{display:"none",width:36,height:36,background:"#d36135",borderRadius:6,alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0}}>🔧</div>
         <div>
-          <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:19,lineHeight:1}}>EL WARCHA <span style={{color:"#e8001d"}}>AUTO</span></div>
+          <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:19,lineHeight:1}}>EL WARCHA <span style={{color:"#d36135"}}>AUTO</span></div>
           <div style={{fontSize:8,color:"#9a9a9a",fontWeight:700,letterSpacing:".1em"}}>IMPORT • VENTE • ALGÉRIE</div>
         </div>
       </div>
@@ -219,9 +220,9 @@ const Navbar = ({page, setPage, search, setSearch}) => (
         {search&&<button onClick={()=>setSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:"#9a9a9a",fontSize:13,padding:2}}>✕</button>}
       </div>
       <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
-        <div className="nav-top" style={{display:"flex",gap:4}}>
+        <div className="mobile-nav" style={{gap:4}}>
           {[{id:"home",l:"🚗"},{id:"dealers",l:"🏢"},{id:"export",l:"📄"},{id:"sql-gen",l:"🛠"},{id:"settings",l:"⚙️"}].map(item=>(
-            <button key={item.id} onClick={()=>setPage(item.id)} style={{background:page===item.id?"#e8001d":"#f2f2f2",color:page===item.id?"#fff":"#555",border:"none",borderRadius:6,padding:"6px 9px",fontSize:15}}>{item.l}</button>
+            <button key={item.id} onClick={()=>setPage(item.id)} style={{background:page===item.id?"#d36135":"#f2f2f2",color:page===item.id?"#fff":"#555",border:"none",borderRadius:6,padding:"6px 9px",fontSize:15,transition:"all .18s"}}>{item.l}</button>
           ))}
         </div>
         <button className="btn-red" onClick={()=>setPage("add-car")} style={{fontSize:12,padding:"7px 12px"}}>+ Voiture</button>
@@ -230,7 +231,7 @@ const Navbar = ({page, setPage, search, setSearch}) => (
   </nav>
 );
 
-const SearchPanel = ({filters, setFilters}) => {
+const SearchPanel = ({filters, setFilters, cars=[]}) => {
   const [draft, setDraft] = useState({...filters});
   const [activeLetter, setActiveLetter] = useState("All");
   const [moreOpen, setMoreOpen] = useState(false);
@@ -239,6 +240,9 @@ const SearchPanel = ({filters, setFilters}) => {
   const eqRow1 = ["cd_dvd","sun_roof","leather_seat","power_seat","seat_heating","seat_ventilation","alloy_wheel","tv"];
   const eqRow2 = ["power_window","auto_ac","abs","driver_airbag","camera_360","adaptive_cruise"];
   const years  = Array.from({length:16},(_,i)=>2025-i);
+  const availableModels = draft.brand
+    ? [...new Set(cars.filter(c=>c.brand===draft.brand).map(c=>c.model).filter(Boolean))].sort()
+    : [];
   const toggleEq = k => setDraft(f=>({...f,equipment:{...(f.equipment||{}),[k]:!f.equipment?.[k]}}));
   const apply = () => setFilters({...draft});
   const clearAll = () => { setDraft({...EMPTY_FILTERS}); setFilters({...EMPTY_FILTERS}); };
@@ -246,15 +250,20 @@ const SearchPanel = ({filters, setFilters}) => {
   return (
     <div className="card" style={{overflow:"hidden",boxShadow:"0 1px 8px rgba(0,0,0,.07)"}}>
       <div style={{background:"#1c1c1c",padding:"10px 16px",display:"flex",alignItems:"center",gap:8}}>
-        <span style={{color:"#e8001d",fontSize:18,fontWeight:900,lineHeight:1}}>|</span>
+        <span style={{color:"#d36135",fontSize:18,fontWeight:900,lineHeight:1}}>|</span>
         <span style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:17,color:"#fff",letterSpacing:".03em"}}>RECHERCHE AVANCÉE</span>
       </div>
       <div className="search-grid" style={{display:"grid",gridTemplateColumns:"1fr 270px"}}>
         <div style={{padding:"14px 16px",borderRight:"1px solid #e5e5e5"}}>
-          <div className="filter-grid4" style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:10,marginBottom:10,alignItems:"end"}}>
+          <div className="filter-grid4" style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr",gap:10,marginBottom:10,alignItems:"end"}}>
             <div><label className="lbl">Marque</label>
-              <select className="f" style={{fontSize:12}} value={draft.brand} onChange={e=>setDraft(f=>({...f,brand:e.target.value}))}>
+              <select className="f" style={{fontSize:12}} value={draft.brand} onChange={e=>setDraft(f=>({...f,brand:e.target.value,model:""}))}>
                 <option value="">Toutes</option>{BRAND_NAMES.map(b=><option key={b} value={b}>{b}</option>)}
+              </select></div>
+            <div><label className="lbl">Modèle</label>
+              <select className="f" style={{fontSize:12}} value={draft.model||""} onChange={e=>setDraft(f=>({...f,model:e.target.value}))} disabled={!draft.brand}>
+                <option value="">{draft.brand?"Tous":"— Choisir marque"}</option>
+                {availableModels.map(m=><option key={m} value={m}>{m}</option>)}
               </select></div>
             <div><label className="lbl">Carrosserie</label>
               <select className="f" style={{fontSize:12}} value={draft.body_type} onChange={e=>setDraft(f=>({...f,body_type:e.target.value}))}>
@@ -287,25 +296,27 @@ const SearchPanel = ({filters, setFilters}) => {
                 <option value="">Toutes</option>{COLORS_LIST.map(c=><option key={c}>{c}</option>)}
               </select></div>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,marginBottom:10}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14,marginBottom:10}}>
             <div><label className="lbl">Km max: <b>{fmt(draft.mileageMax||300000)} km</b></label>
-              <input type="range" min={0} max={300000} step={5000} value={draft.mileageMax||300000} onChange={e=>setDraft(f=>({...f,mileageMax:+e.target.value}))} style={{width:"100%",accentColor:"#e8001d"}}/></div>
-            <div><label className="lbl">Prix max: <b>{fmtCNY(draft.priceMax||500000)}</b></label>
-              <input type="range" min={0} max={500000} step={10000} value={draft.priceMax||500000} onChange={e=>setDraft(f=>({...f,priceMax:+e.target.value}))} style={{width:"100%",accentColor:"#e8001d"}}/></div>
+              <input type="range" min={0} max={300000} step={5000} value={draft.mileageMax||300000} onChange={e=>setDraft(f=>({...f,mileageMax:+e.target.value}))} style={{width:"100%",accentColor:"#d36135"}}/></div>
+            <div><label className="lbl">Prix max CNY: <b>{fmtCNY(draft.priceMax||500000)}</b></label>
+              <input type="range" min={0} max={500000} step={5000} value={draft.priceMax||500000} onChange={e=>setDraft(f=>({...f,priceMax:+e.target.value}))} style={{width:"100%",accentColor:"#d36135"}}/></div>
+            <div><label className="lbl">Prix max USD: <b>{"$"+(draft.priceMaxUSD||50000).toLocaleString("fr-DZ")}</b></label>
+              <input type="range" min={0} max={50000} step={500} value={draft.priceMaxUSD||50000} onChange={e=>setDraft(f=>({...f,priceMaxUSD:+e.target.value}))} style={{width:"100%",accentColor:"#d36135"}}/></div>
           </div>
           <div style={{marginBottom:10}}>
             <label className="lbl" style={{marginBottom:6}}>Couleur (cliquer)</label>
             <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
               {COLORS_LIST.map(c=>(
                 <button key={c} title={c} onClick={()=>setDraft(f=>({...f,color:f.color===c?"":c}))}
-                  style={{width:22,height:22,borderRadius:"50%",background:COLOR_HEX[c]||"#ccc",border:draft.color===c?"3px solid #e8001d":"2px solid #d1d5db",boxShadow:draft.color===c?"0 0 0 2px #fff,0 0 0 4px #e8001d":"none",flexShrink:0,transition:"all .15s"}}/>
+                  style={{width:22,height:22,borderRadius:"50%",background:COLOR_HEX[c]||"#ccc",border:draft.color===c?"3px solid #d36135":"2px solid #d1d5db",boxShadow:draft.color===c?"0 0 0 2px #fff,0 0 0 4px #d36135":"none",flexShrink:0,transition:"all .15s"}}/>
               ))}
             </div>
           </div>
           <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:4}}>
             {eqRow1.map(k=>(
               <label key={k} style={{display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:600,cursor:"pointer",background:draft.equipment?.[k]?"#fef2f2":"#f9f9f9",padding:"4px 8px",borderRadius:5,border:"1px solid "+(draft.equipment?.[k]?"#fecaca":"#e5e5e5")}}>
-                <input type="checkbox" checked={!!draft.equipment?.[k]} onChange={()=>toggleEq(k)} style={{accentColor:"#e8001d",width:12,height:12}}/>{EQUIPMENT_LABELS[k]}
+                <input type="checkbox" checked={!!draft.equipment?.[k]} onChange={()=>toggleEq(k)} style={{accentColor:"#d36135",width:12,height:12}}/>{EQUIPMENT_LABELS[k]}
               </label>
             ))}
           </div>
@@ -314,7 +325,7 @@ const SearchPanel = ({filters, setFilters}) => {
             <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:6,marginBottom:4}}>
               {eqRow2.map(k=>(
                 <label key={k} style={{display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:600,cursor:"pointer",background:draft.equipment?.[k]?"#fef2f2":"#f9f9f9",padding:"4px 8px",borderRadius:5,border:"1px solid "+(draft.equipment?.[k]?"#fecaca":"#e5e5e5")}}>
-                  <input type="checkbox" checked={!!draft.equipment?.[k]} onChange={()=>toggleEq(k)} style={{accentColor:"#e8001d",width:12,height:12}}/>{EQUIPMENT_LABELS[k]}
+                  <input type="checkbox" checked={!!draft.equipment?.[k]} onChange={()=>toggleEq(k)} style={{accentColor:"#d36135",width:12,height:12}}/>{EQUIPMENT_LABELS[k]}
                 </label>
               ))}
             </div>
@@ -333,7 +344,7 @@ const SearchPanel = ({filters, setFilters}) => {
           <div className="brand-grid" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:4,overflowY:"auto",flex:1,maxHeight:220}}>
             {visibleBrands.map(b=>(
               <button key={b.n} onClick={()=>setDraft(f=>({...f,brand:f.brand===b.n?"":b.n}))}
-                style={{background:draft.brand===b.n?"#fff0f0":"#fff",border:"1.5px solid "+(draft.brand===b.n?"#e8001d":"#e5e5e5"),borderRadius:6,padding:"5px 2px",display:"flex",flexDirection:"column",alignItems:"center",gap:2,cursor:"pointer",transition:"all .15s",minHeight:48}}>
+                style={{background:draft.brand===b.n?"#fff0f0":"#fff",border:"1.5px solid "+(draft.brand===b.n?"#d36135":"#e5e5e5"),borderRadius:6,padding:"5px 2px",display:"flex",flexDirection:"column",alignItems:"center",gap:2,cursor:"pointer",transition:"all .15s",minHeight:48}}>
                 <div style={{width:34,height:22,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                   <BrandLogo brand={b.n} size={30}/>
                 </div>
@@ -407,7 +418,7 @@ const CarCard = ({car, settings, onClick}) => {
       </div>
       <div className="car-card-price" style={{width:148,flexShrink:0,borderLeft:"1px solid #e5e5e5",padding:"12px",display:"flex",flexDirection:"column",alignItems:"flex-end",justifyContent:"space-between",background:"#fafafa"}}>
         <div style={{textAlign:"right"}}>
-          <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:21,color:"#e8001d",lineHeight:1}}>{car.price_currency==='USD'?('$'+new Intl.NumberFormat('fr-DZ').format(Math.round(car.price_usd||0))):fmtCNY(car.price_cny)}</div>
+          <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:21,color:"#d36135",lineHeight:1}}>{car.price_currency==='USD'?('$'+new Intl.NumberFormat('fr-DZ').format(Math.round(car.price_usd||0))):fmtCNY(car.price_cny)}</div>
           {dzd&&(
             <div style={{marginTop:5,padding:"4px 8px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:5}}>
               <div style={{fontSize:8,color:"#92400e",fontWeight:700}}>≈ DZD</div>
@@ -428,6 +439,7 @@ const HomePage = ({cars, settings, loading, setPage, setSelectedCar, search, set
     const q = search.toLowerCase();
     if (q && !((c.brand+" "+c.model+" "+c.year+" "+(c.trim||"")+" "+(c.dealers?.name||"")).toLowerCase().includes(q))) return false;
     if (filters.brand     && c.brand!==filters.brand) return false;
+    if (filters.model     && c.model!==filters.model) return false;
     if (filters.fuel      && c.fuel_type!==filters.fuel) return false;
     if (filters.condition && c.condition!==filters.condition) return false;
     if (filters.status    && c.status!==filters.status) return false;
@@ -436,35 +448,36 @@ const HomePage = ({cars, settings, loading, setPage, setSelectedCar, search, set
     if (filters.yearMin   && c.year < parseInt(filters.yearMin)) return false;
     if (filters.yearMax   && c.year > parseInt(filters.yearMax)) return false;
     if ((filters.mileageMax||300000)<300000 && (c.mileage||0)>filters.mileageMax) return false;
-    if ((filters.priceMax||500000)<500000   && (c.price_cny||0)>filters.priceMax) return false;
+    if ((filters.priceMax||500000)<500000   && c.price_currency!=="USD" && (c.price_cny||0)>filters.priceMax) return false;
+    if ((filters.priceMaxUSD||50000)<50000  && c.price_currency==="USD"  && (c.price_usd||0)>filters.priceMaxUSD) return false;
     if (filters.equipment) for (const [k,v] of Object.entries(filters.equipment)) if (v && !c.car_equipment?.[0]?.[k]) return false;
     return true;
   });
   const stats=[{n:cars.length,l:"Véhicules"},{n:cars.filter(c=>c.status==="available").length,l:"Disponibles"},{n:[...new Set(cars.map(c=>c.dealer_id))].length,l:"Concession."},{n:[...new Set(cars.map(c=>c.brand).filter(Boolean))].length,l:"Marques"}];
-  const hasActive = search||Object.entries(filters).some(([k,v])=>k!=="mileageMax"&&k!=="priceMax"&&v&&(typeof v!=="object"||Object.values(v).some(Boolean)));
+  const hasActive = search||Object.entries(filters).some(([k,v])=>k!=="mileageMax"&&k!=="priceMax"&&k!=="priceMaxUSD"&&v&&(typeof v!=="object"||Object.values(v).some(Boolean)));
   return (
     <div className="page-wrap" style={{padding:"80px 20px 40px",maxWidth:1280,margin:"0 auto"}}>
       <div style={{background:"linear-gradient(120deg,#1c1c1c 55%,#2a0808)",borderRadius:12,padding:"18px 22px",color:"#fff",marginBottom:14,overflow:"hidden"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
           <div>
-            <h1 style={{fontSize:28,fontWeight:900,lineHeight:1,marginBottom:3}}>EL WARCHA <span style={{color:"#e8001d"}}>AUTO</span></h1>
+            <h1 style={{fontSize:28,fontWeight:900,lineHeight:1,marginBottom:3}}>EL WARCHA <span style={{color:"#d36135"}}>AUTO</span></h1>
             <p style={{color:"#999",fontSize:12}}>Import direct depuis la Chine — Algérie</p>
           </div>
           <div style={{display:"flex",gap:18,flexShrink:0}}>
             {stats.map(s=>(
               <div key={s.l} style={{textAlign:"center"}}>
-                <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:24,color:"#e8001d",lineHeight:1}}>{s.n}</div>
+                <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:24,color:"#d36135",lineHeight:1}}>{s.n}</div>
                 <div style={{fontSize:9,color:"#999",fontWeight:700,letterSpacing:".04em"}}>{s.l}</div>
               </div>
             ))}
           </div>
         </div>
       </div>
-      <div style={{marginBottom:14}}><SearchPanel filters={filters} setFilters={setFilters}/></div>
+      <div style={{marginBottom:14}}><SearchPanel filters={filters} setFilters={setFilters} cars={cars}/></div>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,flexWrap:"wrap",gap:8}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontFamily:"'Barlow Condensed'",fontWeight:800,fontSize:16}}>{filtered.length} véhicule{filtered.length!==1?"s":""}</span>
-          {hasActive&&<span onClick={()=>{setSearch("");setFilters({...EMPTY_FILTERS});}} style={{fontSize:11,color:"#e8001d",fontWeight:700,cursor:"pointer",border:"1px solid #fecaca",background:"#fff0f0",padding:"2px 8px",borderRadius:10}}>✕ Effacer tout</span>}
+          {hasActive&&<span onClick={()=>{setSearch("");setFilters({...EMPTY_FILTERS});}} style={{fontSize:11,color:"#d36135",fontWeight:700,cursor:"pointer",border:"1px solid #fecaca",background:"#fff0f0",padding:"2px 8px",borderRadius:10}}>✕ Effacer tout</span>}
         </div>
       </div>
       {loading?<Spinner/>:filtered.length===0?(
@@ -497,10 +510,10 @@ const PhotoGrid = ({previews, onAdd, onRemove}) => {
       {previews.length>0&&(
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:8}}>
           {previews.map((src,i)=>(
-            <div key={i} style={{position:"relative",width:"100%",height:110,borderRadius:7,overflow:"hidden",border:i===0?"2px solid #e8001d":"1px solid #ddd",flexShrink:0}}>
+            <div key={i} style={{position:"relative",width:"100%",height:110,borderRadius:7,overflow:"hidden",border:i===0?"2px solid #d36135":"1px solid #ddd",flexShrink:0}}>
               <img src={src} alt="" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
               <button onClick={e=>{e.stopPropagation();onRemove(i);}} style={{position:"absolute",top:4,right:4,background:"rgba(0,0,0,.65)",color:"#fff",border:"none",borderRadius:"50%",width:20,height:20,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",padding:0,cursor:"pointer"}}>✕</button>
-              {i===0&&<div style={{position:"absolute",bottom:4,left:4,background:"#e8001d",color:"#fff",fontSize:9,fontWeight:700,padding:"1px 5px",borderRadius:3}}>PRINCIPALE</div>}
+              {i===0&&<div style={{position:"absolute",bottom:4,left:4,background:"#d36135",color:"#fff",fontSize:9,fontWeight:700,padding:"1px 5px",borderRadius:3}}>PRINCIPALE</div>}
             </div>
           ))}
           <div style={{width:"100%",height:110,borderRadius:7,border:"2px dashed #ddd",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",background:"#fafafa",gap:4}} onClick={()=>inputRef.current?.click()}>
@@ -513,11 +526,11 @@ const PhotoGrid = ({previews, onAdd, onRemove}) => {
   );
 };
 
-const FF  = ({label,required,children}) => (<div><label className="lbl">{label}{required&&<span style={{color:"#e8001d",marginLeft:3}}>*</span>}</label>{children}</div>);
+const FF  = ({label,required,children}) => (<div><label className="lbl">{label}{required&&<span style={{color:"#d36135",marginLeft:3}}>*</span>}</label>{children}</div>);
 const Sec = ({title,children}) => (
   <div className="card" style={{padding:18}}>
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,paddingBottom:8,borderBottom:"1px solid #e5e5e5"}}>
-      <div style={{width:3,height:15,background:"#e8001d",borderRadius:2,flexShrink:0}}/>
+      <div style={{width:3,height:15,background:"#d36135",borderRadius:2,flexShrink:0}}/>
       <h3 style={{fontSize:13,fontWeight:800,textTransform:"uppercase",letterSpacing:".06em"}}>{title}</h3>
     </div>
     <div style={{display:"flex",flexDirection:"column",gap:12}}>{children}</div>
@@ -590,14 +603,14 @@ const CarForm = ({initial, initialEq, dealers, settings, onSubmit, onCancel, sub
           <FF label="Kilométrage"><input className="f" type="number" value={form.mileage} onChange={set("mileage")} placeholder="45000"/></FF>
         </div>
         <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,fontWeight:600}}>
-          <input type="checkbox" checked={form.negotiable} onChange={e=>setForm(f=>({...f,negotiable:e.target.checked}))} style={{width:14,height:14,accentColor:"#e8001d"}}/>Prix négociable
+          <input type="checkbox" checked={form.negotiable} onChange={e=>setForm(f=>({...f,negotiable:e.target.checked}))} style={{width:14,height:14,accentColor:"#d36135"}}/>Prix négociable
         </label>
       </Sec>
       <Sec title="Prix">
         <div style={{display:"flex",gap:0,borderRadius:8,overflow:"hidden",border:"1.5px solid #ddd",width:"fit-content"}}>
           {[{v:"CNY",l:"¥ Yuan (CNY)"},{v:"USD",l:"$ Dollar (USD)"}].map(cur=>(
             <button key={cur.v} type="button" onClick={()=>{setPriceCur(cur.v);setForm(f=>({...f,price_currency:cur.v,price_cny:null,price_usd:null}));}}
-              style={{padding:"8px 24px",fontWeight:700,fontSize:13,border:"none",background:priceCur===cur.v?"#e8001d":"#fff",color:priceCur===cur.v?"#fff":"#555",transition:"all .18s",cursor:"pointer"}}>
+              style={{padding:"8px 24px",fontWeight:700,fontSize:13,border:"none",background:priceCur===cur.v?"#d36135":"#fff",color:priceCur===cur.v?"#fff":"#555",transition:"all .18s",cursor:"pointer"}}>
               {cur.l}
             </button>
           ))}
@@ -630,7 +643,7 @@ const CarForm = ({initial, initialEq, dealers, settings, onSubmit, onCancel, sub
         <div className="eq-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(170px,1fr))",gap:6}}>
           {Object.entries(EQUIPMENT_LABELS).map(([key,label])=>(
             <label key={key} style={{display:"flex",alignItems:"center",gap:7,padding:"8px 11px",borderRadius:5,cursor:"pointer",background:eq[key]?"#f0fdf4":"#fff",border:"1px solid "+(eq[key]?"#a7f3d0":"#ddd"),transition:"all .15s"}}>
-              <input type="checkbox" checked={eq[key]||false} onChange={()=>setEq(e=>({...e,[key]:!e[key]}))} style={{accentColor:"#e8001d",width:13,height:13}}/>
+              <input type="checkbox" checked={eq[key]||false} onChange={()=>setEq(e=>({...e,[key]:!e[key]}))} style={{accentColor:"#d36135",width:13,height:13}}/>
               <span style={{fontSize:11,fontWeight:700,color:eq[key]?"#1c1c1c":"#9a9a9a"}}>{label}</span>
             </label>
           ))}
@@ -681,7 +694,7 @@ const AddCarPage = ({dealers, settings, setPage, onAdd, showToast}) => {
   return (
     <div className="page-wrap" style={{padding:"86px 20px 60px",maxWidth:800,margin:"0 auto"}}>
       <button className="btn-out" onClick={()=>setPage("home")} style={{marginBottom:14,fontSize:12}}>← Retour</button>
-      <h1 style={{fontSize:24,fontWeight:900,marginBottom:18}}>Ajouter une <span style={{color:"#e8001d"}}>Voiture</span></h1>
+      <h1 style={{fontSize:24,fontWeight:900,marginBottom:18}}>Ajouter une <span style={{color:"#d36135"}}>Voiture</span></h1>
       <CarForm initial={{...EMPTY_CAR,_existingPhotos:[]}} initialEq={{...EMPTY_EQ}} dealers={dealers} settings={settings} onSubmit={handleSubmit} onCancel={()=>setPage("home")} submitLabel="✓ Enregistrer" loading={loading}/>
     </div>
   );
@@ -696,7 +709,7 @@ const CarDetailPage = ({car, settings, setPage, onDelete, onUpdate, showToast, d
   return (
     <div style={{background:"#f2f2f2",minHeight:"100vh",paddingBottom:60}}>
       <div style={{background:"#1c1c1c",padding:"7px 24px",marginTop:86,display:"flex",alignItems:"center",gap:6,fontSize:11,color:"#888"}}>
-        <span onClick={()=>setPage("home")} style={{color:"#e8001d",cursor:"pointer",fontWeight:700}}>Accueil</span>
+        <span onClick={()=>setPage("home")} style={{color:"#d36135",cursor:"pointer",fontWeight:700}}>Accueil</span>
         <span>›</span><span style={{color:"#ccc",fontWeight:600}}>{car.brand} {car.model} {car.year}</span>
       </div>
       <div className="detail-grid" style={{maxWidth:1260,margin:"0 auto",padding:"18px 20px",display:"grid",gridTemplateColumns:"1fr 310px",gap:16,alignItems:"start"}}>
@@ -718,7 +731,7 @@ const CarDetailPage = ({car, settings, setPage, onDelete, onUpdate, showToast, d
             {photos.length>1&&(
               <div style={{display:"flex",gap:6,padding:"10px 12px",background:"#f5f5f5",borderTop:"1px solid #e5e5e5",overflowX:"auto"}}>
                 {photos.map((src,i)=>(
-                  <div key={i} onClick={()=>setActivePhoto(i)} style={{width:88,height:62,flexShrink:0,borderRadius:6,overflow:"hidden",cursor:"pointer",border:"2px solid "+(activePhoto===i?"#e8001d":"transparent"),transition:"border .15s"}}>
+                  <div key={i} onClick={()=>setActivePhoto(i)} style={{width:88,height:62,flexShrink:0,borderRadius:6,overflow:"hidden",cursor:"pointer",border:"2px solid "+(activePhoto===i?"#d36135":"transparent"),transition:"border .15s"}}>
                     <img src={src} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
                   </div>
                 ))}
@@ -749,9 +762,9 @@ const CarDetailPage = ({car, settings, setPage, onDelete, onUpdate, showToast, d
               <div style={{width:42,height:42,background:"#f2f2f2",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><BrandLogo brand={car.brand} size={34}/></div>
               <div><h1 style={{fontSize:21,fontWeight:900,lineHeight:1.1}}>{car.year} {car.brand} {car.model}</h1>{car.trim&&<p style={{color:"#9a9a9a",fontSize:11,fontWeight:600}}>{car.trim}</p>}</div>
             </div>
-            <div style={{background:"#f2f2f2",borderRadius:8,padding:"11px 14px",marginBottom:8,borderLeft:"4px solid #e8001d"}}>
+            <div style={{background:"#f2f2f2",borderRadius:8,padding:"11px 14px",marginBottom:8,borderLeft:"4px solid #d36135"}}>
               <div style={{fontSize:9,color:"#9a9a9a",fontWeight:700,letterSpacing:".1em",marginBottom:2}}>PRIX</div>
-              <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:28,color:"#e8001d",lineHeight:1}}>{car.price_currency==='USD'?('$ '+new Intl.NumberFormat('fr-DZ').format(Math.round(car.price_usd||0))):fmtCNY(car.price_cny)}</div>
+              <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:28,color:"#d36135",lineHeight:1}}>{car.price_currency==='USD'?('$ '+new Intl.NumberFormat('fr-DZ').format(Math.round(car.price_usd||0))):fmtCNY(car.price_cny)}</div>
             </div>
             {car.price_fob&&<div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"9px 14px",marginBottom:8}}><div style={{fontSize:9,color:"#0369a1",fontWeight:700,letterSpacing:".08em",marginBottom:2}}>PRIX FOB</div><div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:18,color:"#0369a1"}}>${new Intl.NumberFormat("fr-DZ").format(car.price_fob)}</div></div>}
             {dzd&&<div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"10px 14px",marginBottom:12}}><div style={{fontSize:9,color:"#92400e",fontWeight:700,letterSpacing:".08em",marginBottom:2}}>ESTIMATION DZD</div><div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:20,color:"#92400e"}}>{fmt(dzd)} DZD</div><div style={{fontSize:9,color:"#b45309",marginTop:2}}>Transport · ${settings?.shipment_fee_usd} USD</div></div>}
@@ -767,7 +780,7 @@ const CarDetailPage = ({car, settings, setPage, onDelete, onUpdate, showToast, d
             <div style={{display:"flex",flexDirection:"column",gap:5}}>
               {dealer.mobile&&<div style={{display:"flex",gap:7,fontSize:12}}>📞 <span style={{color:"#555"}}>{dealer.mobile}</span></div>}
               {dealer.email&&<div style={{display:"flex",gap:7,fontSize:12}}>✉️ <span style={{color:"#555"}}>{dealer.email}</span></div>}
-              {dealer.google_maps_link&&<a href={dealer.google_maps_link} target="_blank" rel="noreferrer" style={{display:"flex",gap:7,fontSize:12,color:"#e8001d",fontWeight:600}}>🗺️ Google Maps</a>}
+              {dealer.google_maps_link&&<a href={dealer.google_maps_link} target="_blank" rel="noreferrer" style={{display:"flex",gap:7,fontSize:12,color:"#d36135",fontWeight:600}}>🗺️ Google Maps</a>}
             </div>
           </div>}
         </div>
@@ -823,7 +836,7 @@ const EditCarPage = ({car, settings, setPage, onUpdate, showToast, onCancel, dea
   return (
     <div className="page-wrap" style={{padding:"86px 20px 60px",maxWidth:800,margin:"0 auto"}}>
       <button className="btn-out" onClick={onCancel} style={{marginBottom:14,fontSize:12}}>← Annuler</button>
-      <h1 style={{fontSize:24,fontWeight:900,marginBottom:18}}>Modifier <span style={{color:"#e8001d"}}>{car.brand} {car.model}</span></h1>
+      <h1 style={{fontSize:24,fontWeight:900,marginBottom:18}}>Modifier <span style={{color:"#d36135"}}>{car.brand} {car.model}</span></h1>
       <CarForm initial={initialForm} initialEq={initialEq} dealers={dealers} settings={settings}
         onSubmit={handleSubmit} onCancel={onCancel} submitLabel="✓ Sauvegarder" loading={loading}/>
     </div>
@@ -882,8 +895,8 @@ const DealerDetailPage = ({dealer, cars, settings, setPage, setSelectedCar, setS
             <div style={{display:"flex",flexWrap:"wrap",gap:12}}>
               {dealer.mobile&&<span style={{fontSize:12,color:"#555"}}>📞 {dealer.mobile}</span>}
               {dealer.email&&<span style={{fontSize:12,color:"#555"}}>✉️ {dealer.email}</span>}
-              {dealer.website&&<a href={dealer.website} target="_blank" rel="noreferrer" style={{fontSize:12,color:"#e8001d",fontWeight:600}}>🌐 Site web</a>}
-              {dealer.google_maps_link&&<a href={dealer.google_maps_link} target="_blank" rel="noreferrer" style={{fontSize:12,color:"#e8001d",fontWeight:600}}>🗺️ Maps</a>}
+              {dealer.website&&<a href={dealer.website} target="_blank" rel="noreferrer" style={{fontSize:12,color:"#d36135",fontWeight:600}}>🌐 Site web</a>}
+              {dealer.google_maps_link&&<a href={dealer.google_maps_link} target="_blank" rel="noreferrer" style={{fontSize:12,color:"#d36135",fontWeight:600}}>🗺️ Maps</a>}
             </div>
             {dealer.notes&&<p style={{fontSize:12,color:"#9a9a9a",marginTop:5}}>{dealer.notes}</p>}
           </div>
@@ -916,7 +929,7 @@ const AddDealerPage = ({setPage, onAdd, showToast}) => {
   return (
     <div className="page-wrap" style={{padding:"86px 20px 60px",maxWidth:600,margin:"0 auto"}}>
       <button className="btn-out" onClick={()=>setPage("dealers")} style={{marginBottom:12,fontSize:12}}>← Retour</button>
-      <h1 style={{fontSize:22,fontWeight:900,marginBottom:16}}>Nouveau <span style={{color:"#e8001d"}}>Concessionnaire</span></h1>
+      <h1 style={{fontSize:22,fontWeight:900,marginBottom:16}}>Nouveau <span style={{color:"#d36135"}}>Concessionnaire</span></h1>
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
         <Sec title="Informations">
           <FF label="Nom" required><input className="f" value={form.name} onChange={set("name")} placeholder="Ahmed Auto Alger"/></FF>
@@ -959,7 +972,7 @@ const EditDealerPage = ({dealer, setPage, onUpdate, showToast}) => {
   return (
     <div className="page-wrap" style={{padding:"86px 20px 60px",maxWidth:600,margin:"0 auto"}}>
       <button className="btn-out" onClick={()=>setPage("dealers")} style={{marginBottom:12,fontSize:12}}>← Retour</button>
-      <h1 style={{fontSize:22,fontWeight:900,marginBottom:16}}>Modifier <span style={{color:"#e8001d"}}>{dealer.name}</span></h1>
+      <h1 style={{fontSize:22,fontWeight:900,marginBottom:16}}>Modifier <span style={{color:"#d36135"}}>{dealer.name}</span></h1>
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
         <Sec title="Informations">
           <FF label="Nom" required><input className="f" value={form.name} onChange={set("name")} placeholder="Ahmed Auto Alger"/></FF>
@@ -1037,7 +1050,7 @@ const SettingsPage = ({settings, setSettings, showToast}) => {
               {previewCNY&&(
                 <div style={{background:"#f8f8f8",borderRadius:8,padding:"12px 14px",border:"1px solid #e5e5e5"}}>
                   <div style={{fontSize:10,color:"#9a9a9a",fontWeight:700,marginBottom:4}}>¥100 000 CNY →</div>
-                  <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:18,color:"#e8001d"}}>{fmt(previewCNY)} DZD</div>
+                  <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:18,color:"#d36135"}}>{fmt(previewCNY)} DZD</div>
                   <code style={{fontSize:9,color:"#9a9a9a",display:"block",marginTop:4}}>
                     (100K × {parseFloat(form.cny_usd_rate)||0} + {parseFloat(form.shipment_fee_usd)||0}$) × {parseFloat(form.usd_dzd_rate)||0}
                   </code>
@@ -1046,7 +1059,7 @@ const SettingsPage = ({settings, setSettings, showToast}) => {
               {previewUSD&&(
                 <div style={{background:"#f8f8f8",borderRadius:8,padding:"12px 14px",border:"1px solid #e5e5e5"}}>
                   <div style={{fontSize:10,color:"#9a9a9a",fontWeight:700,marginBottom:4}}>$20 000 USD →</div>
-                  <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:18,color:"#e8001d"}}>{fmt(previewUSD)} DZD</div>
+                  <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:18,color:"#d36135"}}>{fmt(previewUSD)} DZD</div>
                   <code style={{fontSize:9,color:"#9a9a9a",display:"block",marginTop:4}}>
                     (20K + {parseFloat(form.shipment_fee_usd)||0}$) × {parseFloat(form.usd_dzd_rate)||0}
                   </code>
@@ -1073,7 +1086,7 @@ const EXPORT_FIELDS = [
   {k:"brand",l:"Marque"},{k:"model",l:"Modèle"},{k:"year",l:"Année"},
   {k:"trim",l:"Version"},{k:"body_type",l:"Carrosserie"},{k:"condition",l:"Condition"},
   {k:"status",l:"Statut"},{k:"mileage",l:"Kilométrage"},{k:"origin",l:"Origine"},
-  {k:"price_cny",l:"Prix CNY"},{k:"price_usd",l:"Prix USD"},{k:"price_fob",l:"Prix FOB"},{k:"fuel_type",l:"Carburant"},
+  {k:"price_cny",l:"Prix CNY"},{k:"price_usd",l:"Prix USD"},{k:"price_fob",l:"Prix FOB"},{k:"total_usd",l:"Total USD (+ transport)"},{k:"total_dzd",l:"Total DZD"},{k:"fuel_type",l:"Carburant"},
   {k:"transmission",l:"Transmission"},{k:"engine_size",l:"Cylindrée"},
   {k:"color",l:"Couleur"},{k:"doors",l:"Portes"},{k:"negotiable",l:"Négociable"},
   {k:"dealers.name",l:"Concessionnaire"},
@@ -1081,6 +1094,7 @@ const EXPORT_FIELDS = [
 const GROUP_OPTIONS = [
   {k:"dealers.name",l:"Concessionnaire"},
   {k:"brand",l:"Marque"},
+  {k:"brand_model",l:"Marque + Modèle"},
   {k:"model",l:"Modèle"},
   {k:"status",l:"Statut"},
   {k:"condition",l:"Condition"},
@@ -1097,18 +1111,32 @@ const SORT_OPTIONS = [
   {k:"dealers.name",l:"Concessionnaire"},
 ];
 
-const getFieldVal = (car, key) => {
+const getFieldVal = (car, key, settings=null) => {
+  // Computed keys — must be checked BEFORE the early-return on car[key]
+  if (key === "brand_model") return (car.brand||"?") + " " + (car.model||"?");
   if (key === "dealers.name") return car.dealers?.name || "—";
+  if (key === "total_usd") {
+    const priceUSD = car.price_currency==="USD"
+      ? parseFloat(car.price_usd||0)
+      : parseFloat(car.price_cny||0) * parseFloat(settings?.cny_usd_rate||0);
+    const total = priceUSD + parseFloat(settings?.shipment_fee_usd||0);
+    return total>0 ? "$"+new Intl.NumberFormat("fr-DZ").format(Math.round(total)) : "—";
+  }
+  if (key === "total_dzd") {
+    const dzd = calcDZD(car.price_cny, settings, car.price_usd, car.price_currency);
+    return dzd ? new Intl.NumberFormat("fr-DZ").format(dzd)+" DZD" : "—";
+  }
+  // Real car fields
   const v = car[key];
   if (v === null || v === undefined || v === "") return "—";
   if (key === "negotiable") return v ? "Oui" : "Non";
-  if (key === "mileage" && v) return fmt(v) + " km";
+  if (key === "mileage") return fmt(v) + " km";
   if (key === "condition") return v === "new" ? "Neuf" : "Occasion";
   if (key === "status") return {available:"Disponible",sold:"Vendu",reserved:"Réservé"}[v] || v;
   if (key === "origin") return v === "imported" ? "Importé" : "Local";
-  if (key === "price_cny" && v) return "¥" + new Intl.NumberFormat("zh-CN").format(v);
-  if (key === "price_usd" && v) return "$" + new Intl.NumberFormat("fr-DZ").format(Math.round(v));
-  if (key === "price_fob" && v) return "FOB $" + new Intl.NumberFormat("fr-DZ").format(Math.round(v));
+  if (key === "price_cny") return "¥" + new Intl.NumberFormat("zh-CN").format(v);
+  if (key === "price_usd") return "$" + new Intl.NumberFormat("fr-DZ").format(Math.round(v));
+  if (key === "price_fob") return "FOB $" + new Intl.NumberFormat("fr-DZ").format(Math.round(v));
   return String(v);
 };
 
@@ -1123,7 +1151,7 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
   const [groupBy,   setGroupBy]   = useState("dealers.name");
   const [sortBy,    setSortBy]    = useState("price_cny");
   const [sortDir,   setSortDir]   = useState("asc");
-  const [selFields, setSelFields] = useState(["brand","model","year","trim","status","price_usd","price_fob","dealers.name"]);
+  const [selFields, setSelFields] = useState(["brand","model","year","trim","status","price_usd","price_fob","total_usd","total_dzd"]);
   const [printing,  setPrinting]  = useState(false);
 
   const toggleField = k => setSelFields(f => f.includes(k) ? f.filter(x=>x!==k) : [...f,k]);
@@ -1133,6 +1161,7 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
     const q = search.toLowerCase();
     if (q && !((c.brand+" "+c.model+" "+c.year+" "+(c.trim||"")+" "+(c.dealers?.name||"")).toLowerCase().includes(q))) return false;
     if (filters.brand     && c.brand!==filters.brand) return false;
+    if (filters.model     && c.model!==filters.model) return false;
     if (filters.fuel      && c.fuel_type!==filters.fuel) return false;
     if (filters.condition && c.condition!==filters.condition) return false;
     if (filters.status    && c.status!==filters.status) return false;
@@ -1141,7 +1170,8 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
     if (filters.yearMin   && c.year < parseInt(filters.yearMin)) return false;
     if (filters.yearMax   && c.year > parseInt(filters.yearMax)) return false;
     if ((filters.mileageMax||300000)<300000 && (c.mileage||0)>filters.mileageMax) return false;
-    if ((filters.priceMax||500000)<500000   && (c.price_cny||0)>filters.priceMax) return false;
+    if ((filters.priceMax||500000)<500000   && c.price_currency!=="USD" && (c.price_cny||0)>filters.priceMax) return false;
+    if ((filters.priceMaxUSD||50000)<50000  && c.price_currency==="USD"  && (c.price_usd||0)>filters.priceMaxUSD) return false;
     if (filters.equipment) for (const [k,v] of Object.entries(filters.equipment)) if (v && !c.car_equipment?.[0]?.[k]) return false;
     return true;
   });
@@ -1180,18 +1210,42 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
     const now = new Date().toLocaleString("fr-DZ");
 
     const groupRows = grouped.map(([gName, gcars]) => {
-      const rows = gcars.map(car => {
+      // Build rows with rowspan: detect consecutive identical values per column
+      const rowData = gcars.map(car => {
         const params = new URLSearchParams();
         if (car.brand)         params.set('brand',  car.brand);
         if (car.model)         params.set('model',  car.model);
-        if (car.year)          params.set('year',   car.year);
+        if (car.year)          params.set('year',   String(car.year));
         if (car.dealers?.name) params.set('dealer', car.dealers.name);
         if (car.trim)          params.set('trim',   car.trim);
         if (car.color)         params.set('color',  car.color);
         const link = BASE_URL + '/?' + params.toString();
-        const cells = cols.map(col => `<td>${getFieldVal(car, col.k)}</td>`).join("");
-        return `<tr>${cells}<td><a href="${link}" style="color:#e8001d;font-size:10px;word-break:break-all;">🔗 Voir fiche</a></td></tr>`;
+        return { vals: cols.map(col => getFieldVal(car, col.k, settings)), link };
+      });
+
+      // Compute rowspans per column
+      const spanMatrix = cols.map((_, ci) => {
+        const spans = new Array(rowData.length).fill(1);
+        for (let i = rowData.length - 2; i >= 0; i--) {
+          if (rowData[i].vals[ci] === rowData[i+1].vals[ci] && rowData[i].vals[ci] !== "—") {
+            spans[i] = spans[i+1] + 1;
+            spans[i+1] = 0; // hidden
+          }
+        }
+        return spans;
+      });
+
+      const rows = rowData.map((row, ri) => {
+        const cells = cols.map((col, ci) => {
+          const span = spanMatrix[ci][ri];
+          if (span === 0) return '';
+          const rs = span > 1 ? ` rowspan="${span}"` : '';
+          const bg = span > 1 ? ' style="background:#fff8f8;font-weight:700;"' : '';
+          return `<td${rs}${bg}>${row.vals[ci]}</td>`;
+        }).join("");
+        return `<tr>${cells}<td><a href="${row.link}" style="color:#d36135;font-size:10px;">🔗 Voir</a></td></tr>`;
       }).join("");
+
       return `
         <tr class="group-header"><td colspan="${cols.length+1}">${gName} — ${gcars.length} véhicule${gcars.length!==1?"s":""}</td></tr>
         ${rows}
@@ -1210,11 +1264,11 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
       th{background:#1c1c1c;color:#fff;padding:6px 8px;text-align:left;font-size:10px;white-space:nowrap;}
       td{padding:5px 8px;border-bottom:1px solid #e5e5e5;vertical-align:top;}
       tr:nth-child(even) td{background:#f9f9f9;}
-      .group-header td{background:#e8001d;color:#fff;font-weight:700;font-size:11px;padding:6px 10px;letter-spacing:.04em;}
+      .group-header td{background:#d36135;color:#fff;font-weight:700;font-size:11px;padding:6px 10px;letter-spacing:.04em;}
       @media print{
         body{padding:10px;}
-        a{color:#e8001d!important;}
-        .group-header td{-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#e8001d!important;}
+        a{color:#d36135!important;}
+        .group-header td{-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#d36135!important;}
         th{-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#1c1c1c!important;}
       }
     </style></head><body>
@@ -1245,7 +1299,7 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
       <div className="export-grid" style={{display:"grid",gridTemplateColumns:"1fr 340px",gap:14,alignItems:"start"}}>
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
           {/* Filters */}
-          <SearchPanel filters={filters} setFilters={setFilters}/>
+          <SearchPanel filters={filters} setFilters={setFilters} cars={cars}/>
           <div className="card" style={{padding:14}}>
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
               <input className="f" placeholder="🔍 Recherche rapide..." value={search} onChange={e=>setSearch2(e.target.value)} style={{fontSize:13}}/>
@@ -1261,7 +1315,7 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
               : grouped.map(([gName, gcars])=>(
                 <div key={gName} style={{marginBottom:12}}>
                   <div style={{background:"#1c1c1c",color:"#fff",padding:"5px 12px",borderRadius:"6px 6px 0 0",fontSize:12,fontWeight:700,display:"flex",justifyContent:"space-between"}}>
-                    <span>{gName}</span><span style={{color:"#e8001d"}}>{gcars.length} voiture{gcars.length!==1?"s":""}</span>
+                    <span>{gName}</span><span style={{color:"#d36135"}}>{gcars.length} voiture{gcars.length!==1?"s":""}</span>
                   </div>
                   <div style={{border:"1px solid #e5e5e5",borderTop:"none",borderRadius:"0 0 6px 6px",overflow:"hidden"}}>
                     {gcars.map((car,i)=>(
@@ -1269,7 +1323,7 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
                         <span style={{fontWeight:700}}>{car.year} {car.brand} {car.model} {car.trim||""}</span>
                         <div style={{display:"flex",gap:8,alignItems:"center"}}>
                           <STag status={car.status}/>
-                          <span style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:13,color:"#e8001d"}}>
+                          <span style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:13,color:"#d36135"}}>
                             {car.price_currency==="USD"?("$"+new Intl.NumberFormat("fr-DZ").format(Math.round(car.price_usd||0))):fmtCNY(car.price_cny)}
                           </span>
                         </div>
@@ -1311,7 +1365,7 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
             <div style={{display:"flex",flexDirection:"column",gap:5}}>
               {EXPORT_FIELDS.map(f=>(
                 <label key={f.k} style={{display:"flex",alignItems:"center",gap:7,fontSize:12,fontWeight:600,cursor:"pointer",padding:"4px 6px",borderRadius:5,background:selFields.includes(f.k)?"#f0fdf4":"transparent",border:"1px solid "+(selFields.includes(f.k)?"#a7f3d0":"transparent")}}>
-                  <input type="checkbox" checked={selFields.includes(f.k)} onChange={()=>toggleField(f.k)} style={{accentColor:"#e8001d",width:13,height:13}}/>
+                  <input type="checkbox" checked={selFields.includes(f.k)} onChange={()=>toggleField(f.k)} style={{accentColor:"#d36135",width:13,height:13}}/>
                   {f.l}
                 </label>
               ))}
@@ -1478,14 +1532,14 @@ const SQLGeneratorPage = ({showToast}) => {
   const GTab = ({id, label}) => (
     <button onClick={()=>setActiveTab(id)} style={{
       background:'none', border:'none', padding:'8px 16px', fontSize:13, fontWeight:700,
-      color: activeTab===id ? '#e8001d' : '#9a9a9a', cursor:'pointer',
-      borderBottom: activeTab===id ? '2px solid #e8001d' : '2px solid transparent',
+      color: activeTab===id ? '#d36135' : '#9a9a9a', cursor:'pointer',
+      borderBottom: activeTab===id ? '2px solid #d36135' : '2px solid transparent',
       marginBottom:-1, transition:'color .15s',
     }}>{label}</button>
   );
 
   const Tag = ({children}) => (
-    <span style={{display:'inline-block',background:'rgba(232,0,29,.1)',color:'#e8001d',
+    <span style={{display:'inline-block',background:'rgba(232,0,29,.1)',color:'#d36135',
       border:'1px solid rgba(232,0,29,.2)',borderRadius:4,padding:'1px 7px',
       fontSize:11,fontWeight:700,fontFamily:'monospace',margin:'2px 2px 2px 0'}}>{children}</span>
   );
@@ -1493,7 +1547,7 @@ const SQLGeneratorPage = ({showToast}) => {
   return (
     <div style={{padding:'86px 20px 60px',maxWidth:1200,margin:'0 auto'}}>
       <div style={{marginBottom:20}}>
-        <h1 style={{fontSize:26,fontWeight:900,marginBottom:4}}>🛠 SQL <span style={{color:'#e8001d'}}>Generator</span></h1>
+        <h1 style={{fontSize:26,fontWeight:900,marginBottom:4}}>🛠 SQL <span style={{color:'#d36135'}}>Generator</span></h1>
         <p style={{color:'#9a9a9a',fontSize:13}}>Colle le texte brut d'un dealer — l'IA génère les INSERT SQL prêts à exécuter dans Supabase.</p>
       </div>
 
@@ -1511,7 +1565,7 @@ const SQLGeneratorPage = ({showToast}) => {
               {/* Dealer info */}
               <div className="card" style={{padding:18}}>
                 <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12,paddingBottom:8,borderBottom:'1px solid #e5e5e5'}}>
-                  <div style={{width:3,height:15,background:'#e8001d',borderRadius:2,flexShrink:0}}/>
+                  <div style={{width:3,height:15,background:'#d36135',borderRadius:2,flexShrink:0}}/>
                   <h3 style={{fontSize:13,fontWeight:800,textTransform:'uppercase',letterSpacing:'.06em'}}>Informations dealer</h3>
                 </div>
                 <div className="sqlgen-dealer-row" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
@@ -1529,7 +1583,7 @@ const SQLGeneratorPage = ({showToast}) => {
               {/* Text input */}
               <div className="card" style={{padding:18}}>
                 <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12,paddingBottom:8,borderBottom:'1px solid #e5e5e5'}}>
-                  <div style={{width:3,height:15,background:'#e8001d',borderRadius:2,flexShrink:0}}/>
+                  <div style={{width:3,height:15,background:'#d36135',borderRadius:2,flexShrink:0}}/>
                   <h3 style={{fontSize:13,fontWeight:800,textTransform:'uppercase',letterSpacing:'.06em'}}>Texte brut du dealer</h3>
                 </div>
                 <textarea className="f" value={rawText} onChange={e=>setRawText(e.target.value)}
@@ -1553,7 +1607,7 @@ const SQLGeneratorPage = ({showToast}) => {
                     {n:stats.sunroof, l:'Toit ouvrant'},
                   ].map(s=>(
                     <div key={s.l} className="card" style={{padding:'10px 14px',textAlign:'center'}}>
-                      <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:26,color:'#e8001d',lineHeight:1}}>{s.n}</div>
+                      <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:26,color:'#d36135',lineHeight:1}}>{s.n}</div>
                       <div style={{fontSize:10,color:'#9a9a9a',fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',marginTop:2}}>{s.l}</div>
                     </div>
                   ))}
@@ -1584,7 +1638,7 @@ const SQLGeneratorPage = ({showToast}) => {
           {activeTab === 'history' && (
             <div className="card" style={{padding:18}}>
               <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12,paddingBottom:8,borderBottom:'1px solid #e5e5e5'}}>
-                <div style={{width:3,height:15,background:'#e8001d',borderRadius:2,flexShrink:0}}/>
+                <div style={{width:3,height:15,background:'#d36135',borderRadius:2,flexShrink:0}}/>
                 <h3 style={{fontSize:13,fontWeight:800,textTransform:'uppercase',letterSpacing:'.06em'}}>Historique des générations</h3>
               </div>
               {history.length === 0 ? (
@@ -1608,7 +1662,7 @@ const SQLGeneratorPage = ({showToast}) => {
                       <span style={{fontFamily:'monospace',marginLeft:8,fontSize:10}}>{h.uuid?.slice(0,13)}...</span>
                     </div>
                   </div>
-                  <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:28,color:'#e8001d'}}>{h.count}</div>
+                  <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:28,color:'#d36135'}}>{h.count}</div>
                 </div>
               ))}
             </div>
@@ -1628,7 +1682,7 @@ const SQLGeneratorPage = ({showToast}) => {
               ['Trims différents', '→ 1 ligne par trim'],
             ].map(([k,v]) => (
               <div key={k} style={{display:'flex',gap:8,alignItems:'flex-start',marginBottom:7,fontSize:12}}>
-                <div style={{width:4,height:4,background:'#e8001d',borderRadius:'50%',flexShrink:0,marginTop:5}}/>
+                <div style={{width:4,height:4,background:'#d36135',borderRadius:'50%',flexShrink:0,marginTop:5}}/>
                 <span><span style={{fontWeight:700,fontFamily:'monospace',fontSize:11}}>{k}</span> {v}</span>
               </div>
             ))}
