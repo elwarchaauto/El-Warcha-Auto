@@ -30,10 +30,10 @@ const ALL_BRANDS = [
   {n:"Hyundai",d:"hyundai.com"},{n:"Infiniti",d:"infiniti.com"},{n:"Isuzu",d:"isuzu.com"},
   {n:"Jaguar",d:"jaguar.com"},{n:"Jeep",d:"jeep.com"},{n:"Jetour",d:"jetour.com"},
   {n:"Kia",d:"kia.com"},{n:"Lamborghini",d:"lamborghini.com"},{n:"Lancia",d:"lancia.com"},
-  {n:"Land Rover",d:"landrover.com"},{n:"Leapmotor",d:"leapmotor.com"},{n:"Lexus",d:"lexus.com"},
+  {n:"Land Rover",d:"landrover.com"},{n:"Livan",d:"livan-auto.com"},{n:"Leapmotor",d:"leapmotor.com"},{n:"Lexus",d:"lexus.com"},
   {n:"Li Auto",d:"lixiang.com"},{n:"Lincoln",d:"lincolnvehicles.com"},{n:"Lotus",d:"lotuscars.com"},
   {n:"Lucid",d:"lucidmotors.com"},{n:"Maserati",d:"maserati.com"},{n:"Mazda",d:"mazda.com"},
-  {n:"McLaren",d:"mclaren.com"},{n:"Mercedes-Benz",d:"mercedes-benz.com"},{n:"MG",d:"mgmotor.com"},
+  {n:"McLaren",d:"mclaren.com"},{n:"Mercedes-Benz",d:"mercedes-benz.com"},{n:"MG",d:"mgmotor.com"},{n:"Roewe",d:"roewe.com"},
   {n:"Mini",d:"mini.com"},{n:"Mitsubishi",d:"mitsubishi-motors.com"},{n:"NIO",d:"nio.com"},
   {n:"Nissan",d:"nissan.com"},{n:"Opel",d:"opel.com"},{n:"Peugeot",d:"peugeot.com"},
   {n:"Porsche",d:"porsche.com"},{n:"RAM",d:"ramtrucks.com"},{n:"Renault",d:"renault.com"},
@@ -47,8 +47,11 @@ const ALL_BRANDS = [
 const BRAND_NAMES = ALL_BRANDS.map(b=>b.n);
 
 
+// Read deep-link param immediately on module load (before React renders)
+const _deepLinkCarId = new URLSearchParams(window.location.search).get("car");
+
 const EMPTY_FILTERS = {brand:"",fuel:"",condition:"",status:"",color:"",body_type:"",yearMin:"",yearMax:"",mileageMax:300000,priceMax:500000,equipment:{}};
-const EMPTY_CAR     = {dealer_id:"",brand:"",model:"",year:"",trim:"",body_type:"",condition:"used",status:"available",mileage:"",origin:"imported",price_cny:"",price_usd:"",price_currency:"CNY",negotiable:false,fuel_type:"",transmission:"",engine_size:"",color:"",doors:"",description:""};
+const EMPTY_CAR     = {dealer_id:"",brand:"",model:"",year:"",trim:"",body_type:"",condition:"used",status:"available",mileage:"",origin:"imported",price_cny:"",price_usd:"",price_fob:"",price_currency:"CNY",negotiable:false,fuel_type:"",transmission:"",engine_size:"",color:"",doors:"",description:""};
 const EMPTY_EQ      = Object.fromEntries(Object.keys(EQUIPMENT_LABELS).map(k=>[k,false]));
 
 const fmt    = n => n!=null ? new Intl.NumberFormat("fr-DZ").format(Math.round(n)) : "—";
@@ -113,6 +116,9 @@ select.f{appearance:auto;}
   .nav-search{display:none!important;}
   .search-grid{grid-template-columns:1fr!important;}
   .detail-grid{grid-template-columns:1fr!important;}
+  .sqlgen-grid{grid-template-columns:1fr!important;}
+  .sqlgen-info{position:static!important;}
+  .export-grid{grid-template-columns:1fr!important;}
 }
 @media(max-width:700px){
   .car-card{flex-direction:column!important;}
@@ -125,6 +131,8 @@ select.f{appearance:auto;}
   .form-grid2{grid-template-columns:1fr!important;}
   .form-grid3{grid-template-columns:1fr!important;}
   .page-wrap{padding:78px 12px 40px!important;}
+  .sqlgen-dealer-row{grid-template-columns:1fr!important;}
+  .sqlgen-stats{grid-template-columns:repeat(2,1fr)!important;}
 }
 @media(max-width:480px){
   .brand-grid{grid-template-columns:repeat(2,1fr)!important;}
@@ -175,14 +183,20 @@ const Navbar = ({page, setPage, search, setSearch}) => (
     <div className="nav-top" style={{background:"#1c1c1c",padding:"4px 24px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <span style={{color:"#888",fontSize:11,fontWeight:600}}>📍 Algérie — Import direct Chine</span>
       <div style={{display:"flex",gap:20}}>
-        {[{id:"home",l:"🚗 Voitures"},{id:"dealers",l:"🏢 Concessionnaires"},{id:"export",l:"📄 Export PDF"},{id:"settings",l:"⚙️ Paramètres"}].map(item=>(
+        {[{id:"home",l:"🚗 Voitures"},{id:"dealers",l:"🏢 Concessionnaires"},{id:"export",l:"📄 Export PDF"},{id:"sql-gen",l:"🛠 SQL Generator"},{id:"settings",l:"⚙️ Paramètres"}].map(item=>(
           <button key={item.id} onClick={()=>setPage(item.id)} style={{background:"none",color:page===item.id?"#e8001d":"#999",fontSize:11,fontWeight:700,padding:"2px 0",borderBottom:page===item.id?"1.5px solid #e8001d":"1.5px solid transparent"}}>{item.l}</button>
         ))}
       </div>
     </div>
     <div className="nav-main" style={{padding:"0 24px",height:58,display:"flex",alignItems:"center",justifyContent:"space-between",gap:14}}>
       <div style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",flexShrink:0}} onClick={()=>setPage("home")}>
-        <div style={{width:36,height:36,background:"#e8001d",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0}}>🔧</div>
+        <img
+          src="/logo.png"
+          alt="El Warcha Auto"
+          style={{height:44,width:"auto",objectFit:"contain",flexShrink:0}}
+          onError={e=>{e.target.style.display="none";e.target.nextSibling.style.display="flex";}}
+        />
+        <div style={{display:"none",width:36,height:36,background:"#e8001d",borderRadius:6,alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0}}>🔧</div>
         <div>
           <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:19,lineHeight:1}}>EL WARCHA <span style={{color:"#e8001d"}}>AUTO</span></div>
           <div style={{fontSize:8,color:"#9a9a9a",fontWeight:700,letterSpacing:".1em"}}>IMPORT • VENTE • ALGÉRIE</div>
@@ -196,7 +210,7 @@ const Navbar = ({page, setPage, search, setSearch}) => (
       </div>
       <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
         <div className="nav-top" style={{display:"flex",gap:4}}>
-          {[{id:"home",l:"🚗"},{id:"dealers",l:"🏢"},{id:"export",l:"📄"},{id:"settings",l:"⚙️"}].map(item=>(
+          {[{id:"home",l:"🚗"},{id:"dealers",l:"🏢"},{id:"export",l:"📄"},{id:"sql-gen",l:"🛠"},{id:"settings",l:"⚙️"}].map(item=>(
             <button key={item.id} onClick={()=>setPage(item.id)} style={{background:page===item.id?"#e8001d":"#f2f2f2",color:page===item.id?"#fff":"#555",border:"none",borderRadius:6,padding:"6px 9px",fontSize:15}}>{item.l}</button>
           ))}
         </div>
@@ -373,7 +387,13 @@ const CarCard = ({car, settings, onClick}) => {
             {eqList.length>6&&<span style={{fontSize:10,color:"#9a9a9a",fontWeight:600}}>+{eqList.length-6}</span>}
           </div>
         )}
-        <div style={{fontSize:10,color:"#9a9a9a",marginTop:"auto"}}>{car.origin==="imported"?"✈️ Importé":"🏠 Local"}{car.body_type?" • "+car.body_type:""}</div>
+        <div style={{display:"flex",alignItems:"center",gap:6,marginTop:"auto",flexWrap:"wrap"}}>
+          <span style={{fontSize:10,color:"#9a9a9a"}}>{car.origin==="imported"?"✈️ Importé":"🏠 Local"}{car.body_type?" • "+car.body_type:""}</span>
+          {car.color&&<span style={{display:"inline-flex",alignItems:"center",gap:3,fontSize:10,fontWeight:700,color:"#555"}}>
+            <span style={{width:10,height:10,borderRadius:"50%",background:COLOR_HEX[car.color]||"#ccc",border:"1px solid rgba(0,0,0,.15)",flexShrink:0,display:"inline-block"}}/>
+            {car.color}
+          </span>}
+        </div>
       </div>
       <div className="car-card-price" style={{width:148,flexShrink:0,borderLeft:"1px solid #e5e5e5",padding:"12px",display:"flex",flexDirection:"column",alignItems:"flex-end",justifyContent:"space-between",background:"#fafafa"}}>
         <div style={{textAlign:"right"}}>
@@ -385,6 +405,7 @@ const CarCard = ({car, settings, onClick}) => {
             </div>
           )}
         </div>
+        {car.price_fob&&<div style={{fontSize:9,background:"#f0f9ff",color:"#0369a1",fontWeight:700,padding:"2px 6px",borderRadius:3,border:"1px solid #bae6fd",marginBottom:3}}>FOB ${new Intl.NumberFormat("fr-DZ").format(car.price_fob)}</div>}
         <div style={{fontSize:9,color:"#9a9a9a",fontWeight:600}}>{new Date(car.created_at||Date.now()).toLocaleDateString("fr-DZ")}</div>
       </div>
     </div>
@@ -464,15 +485,15 @@ const PhotoGrid = ({previews, onAdd, onRemove}) => {
         <p style={{fontSize:11,color:"#9a9a9a",marginTop:2}}>Plusieurs photos acceptées — JPG, PNG, WEBP</p>
       </div>
       {previews.length>0&&(
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:8}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:8}}>
           {previews.map((src,i)=>(
-            <div key={i} style={{position:"relative",aspectRatio:"4/3",borderRadius:7,overflow:"hidden",border:i===0?"2px solid #e8001d":"1px solid #ddd"}}>
-              <img src={src} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+            <div key={i} style={{position:"relative",width:"100%",height:110,borderRadius:7,overflow:"hidden",border:i===0?"2px solid #e8001d":"1px solid #ddd",flexShrink:0}}>
+              <img src={src} alt="" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
               <button onClick={e=>{e.stopPropagation();onRemove(i);}} style={{position:"absolute",top:4,right:4,background:"rgba(0,0,0,.65)",color:"#fff",border:"none",borderRadius:"50%",width:20,height:20,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",padding:0,cursor:"pointer"}}>✕</button>
               {i===0&&<div style={{position:"absolute",bottom:4,left:4,background:"#e8001d",color:"#fff",fontSize:9,fontWeight:700,padding:"1px 5px",borderRadius:3}}>PRINCIPALE</div>}
             </div>
           ))}
-          <div style={{aspectRatio:"4/3",borderRadius:7,border:"2px dashed #ddd",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",background:"#fafafa",gap:4}} onClick={()=>inputRef.current?.click()}>
+          <div style={{width:"100%",height:110,borderRadius:7,border:"2px dashed #ddd",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",background:"#fafafa",gap:4}} onClick={()=>inputRef.current?.click()}>
             <span style={{fontSize:22,color:"#9a9a9a"}}>+</span>
             <span style={{fontSize:10,color:"#9a9a9a",fontWeight:600}}>Ajouter</span>
           </div>
@@ -496,7 +517,7 @@ const Sec = ({title,children}) => (
 const CarForm = ({initial, initialEq, dealers, settings, onSubmit, onCancel, submitLabel, loading}) => {
   const [form, setForm] = useState(initial);
   const [eq,   setEq]   = useState(initialEq);
-  const [priceCur, setPriceCur] = useState('CNY');
+  const [priceCur, setPriceCur] = useState(initial.price_currency || 'CNY');
   // Each entry: {src: string (dataURL or http URL), file: File|null}
   const [photos, setPhotos] = useState(
     (initial._existingPhotos||[]).map(url=>({src:url, file:null}))
@@ -576,6 +597,9 @@ const CarForm = ({initial, initialEq, dealers, settings, onSubmit, onCancel, sub
             placeholder={priceCur==="CNY"?"ex: 150 000 ¥":"ex: 20 000 $"}/>
         </FF>
         {priceEquiv&&<div style={{fontSize:11,color:"#9a9a9a",fontWeight:600,marginTop:-4}}>{priceEquiv}</div>}
+        <FF label="Prix FOB (optionnel $)">
+          <input className="f" type="number" value={form.price_fob||''} onChange={set("price_fob")} placeholder="ex: 7300 (Free On Board)"/>
+        </FF>
         {previewDZD>0&&(
           <div style={{padding:"9px 13px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <span style={{fontSize:12,color:"#92400e",fontWeight:700}}>Estimation DZD :</span>
@@ -623,6 +647,7 @@ const AddCarPage = ({dealers, settings, setPage, onAdd, showToast}) => {
         mileage: parseInt(form.mileage)||null,
         price_cny: form.price_currency==='CNY' ? parseFloat(form.price_cny)||null : null,
         price_usd: form.price_currency==='USD' ? parseFloat(form.price_usd)||null : null,
+        price_fob: parseFloat(form.price_fob)||null,
         price_currency: form.price_currency||'CNY',
         doors: parseInt(form.doors)||null,
         photos: [],
@@ -718,6 +743,7 @@ const CarDetailPage = ({car, settings, setPage, onDelete, onUpdate, showToast, d
               <div style={{fontSize:9,color:"#9a9a9a",fontWeight:700,letterSpacing:".1em",marginBottom:2}}>PRIX</div>
               <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:28,color:"#e8001d",lineHeight:1}}>{car.price_currency==='USD'?('$ '+new Intl.NumberFormat('fr-DZ').format(Math.round(car.price_usd||0))):fmtCNY(car.price_cny)}</div>
             </div>
+            {car.price_fob&&<div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"9px 14px",marginBottom:8}}><div style={{fontSize:9,color:"#0369a1",fontWeight:700,letterSpacing:".08em",marginBottom:2}}>PRIX FOB</div><div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:18,color:"#0369a1"}}>${new Intl.NumberFormat("fr-DZ").format(car.price_fob)}</div></div>}
             {dzd&&<div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"10px 14px",marginBottom:12}}><div style={{fontSize:9,color:"#92400e",fontWeight:700,letterSpacing:".08em",marginBottom:2}}>ESTIMATION DZD</div><div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:20,color:"#92400e"}}>{fmt(dzd)} DZD</div><div style={{fontSize:9,color:"#b45309",marginTop:2}}>Transport · ${settings?.shipment_fee_usd} USD</div></div>}
             <div style={{display:"flex",gap:5,marginBottom:12,flexWrap:"wrap"}}><STag status={car.status}/><CTag condition={car.condition}/>{car.negotiable&&<span className="tag tgr">🏷️ Négociable</span>}</div>
             <div style={{display:"flex",gap:8}}>
@@ -766,6 +792,7 @@ const EditCarPage = ({car, settings, setPage, onUpdate, showToast, onCancel, dea
       data.mileage = parseInt(data.mileage)||null;
       data.price_cny = data.price_currency==='CNY' ? parseFloat(data.price_cny)||null : null;
       data.price_usd = data.price_currency==='USD' ? parseFloat(data.price_usd)||null : null;
+      data.price_fob = parseFloat(data.price_fob)||null;
       data.doors = parseInt(data.doors)||null;
       // Keep existing http URLs that weren't removed, then append new uploads
       const existingUrls = allPreviews.filter(p => typeof p==="string" && p.startsWith("http"));
@@ -1036,7 +1063,7 @@ const EXPORT_FIELDS = [
   {k:"brand",l:"Marque"},{k:"model",l:"Modèle"},{k:"year",l:"Année"},
   {k:"trim",l:"Version"},{k:"body_type",l:"Carrosserie"},{k:"condition",l:"Condition"},
   {k:"status",l:"Statut"},{k:"mileage",l:"Kilométrage"},{k:"origin",l:"Origine"},
-  {k:"price_cny",l:"Prix CNY"},{k:"price_usd",l:"Prix USD"},{k:"fuel_type",l:"Carburant"},
+  {k:"price_cny",l:"Prix CNY"},{k:"price_usd",l:"Prix USD"},{k:"price_fob",l:"Prix FOB"},{k:"fuel_type",l:"Carburant"},
   {k:"transmission",l:"Transmission"},{k:"engine_size",l:"Cylindrée"},
   {k:"color",l:"Couleur"},{k:"doors",l:"Portes"},{k:"negotiable",l:"Négociable"},
   {k:"dealers.name",l:"Concessionnaire"},
@@ -1071,11 +1098,12 @@ const getFieldVal = (car, key) => {
   if (key === "origin") return v === "imported" ? "Importé" : "Local";
   if (key === "price_cny" && v) return "¥" + new Intl.NumberFormat("zh-CN").format(v);
   if (key === "price_usd" && v) return "$" + new Intl.NumberFormat("fr-DZ").format(Math.round(v));
+  if (key === "price_fob" && v) return "FOB $" + new Intl.NumberFormat("fr-DZ").format(Math.round(v));
   return String(v);
 };
 
 const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
-  const BASE_URL = window.location.origin + window.location.pathname;
+  const BASE_URL = 'https://elwarchaauto.vercel.app';
 
   // ── Filter state (same as HomePage) ──
   const [filters, setFilters]   = useState({...EMPTY_FILTERS});
@@ -1085,7 +1113,7 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
   const [groupBy,   setGroupBy]   = useState("dealers.name");
   const [sortBy,    setSortBy]    = useState("price_cny");
   const [sortDir,   setSortDir]   = useState("asc");
-  const [selFields, setSelFields] = useState(["brand","model","year","trim","status","price_cny","price_usd","dealers.name"]);
+  const [selFields, setSelFields] = useState(["brand","model","year","trim","status","price_usd","price_fob","dealers.name"]);
   const [printing,  setPrinting]  = useState(false);
 
   const toggleField = k => setSelFields(f => f.includes(k) ? f.filter(x=>x!==k) : [...f,k]);
@@ -1143,7 +1171,7 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
 
     const groupRows = grouped.map(([gName, gcars]) => {
       const rows = gcars.map(car => {
-        const link = BASE_URL + "#car-" + car.id;
+        const link = BASE_URL + "/?car=" + car.id;
         const cells = cols.map(col => `<td>${getFieldVal(car, col.k)}</td>`).join("");
         return `<tr>${cells}<td><a href="${link}" style="color:#e8001d;font-size:10px;word-break:break-all;">🔗 Voir fiche</a></td></tr>`;
       }).join("");
@@ -1197,7 +1225,7 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
         </button>
       </div>
 
-      <div style={{display:"grid",gridTemplateColumns:"1fr 340px",gap:14,alignItems:"start"}}>
+      <div className="export-grid" style={{display:"grid",gridTemplateColumns:"1fr 340px",gap:14,alignItems:"start"}}>
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
           {/* Filters */}
           <SearchPanel filters={filters} setFilters={setFilters}/>
@@ -1280,6 +1308,337 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
 };
 
 
+// ============================================================
+// SQL GENERATOR PAGE
+// ============================================================
+const SQL_EQ_COLS = ['cd_dvd','sun_roof','leather_seat','power_seat','seat_heating',
+  'seat_ventilation','alloy_wheel','tv','power_window','auto_ac',
+  'abs','driver_airbag','camera_360','adaptive_cruise'];
+
+const sqlEsc = v => {
+  if (v === null || v === undefined) return 'NULL';
+  if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
+  if (typeof v === 'number') return String(v);
+  return "'" + String(v).replace(/'/g,"''") + "'";
+};
+
+const genUUIDv4 = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+  const r = Math.random()*16|0;
+  return (c==='x'?r:(r&0x3|0x8)).toString(16);
+});
+
+const buildCarSQL = (cars, dealerName, dealerUUID) => {
+  const lines = [
+    '-- ================================================================',
+    `-- Dealer : ${dealerName}`,
+    `-- UUID   : ${dealerUUID}`,
+    `-- Cars   : ${cars.length} rows`,
+    `-- Generated: ${new Date().toLocaleString('fr-DZ')}`,
+    '-- ================================================================\n',
+    'INSERT INTO dealers (id, name)',
+    `VALUES (${sqlEsc(dealerUUID)}, ${sqlEsc(dealerName)})`,
+    'ON CONFLICT (id) DO NOTHING;\n',
+  ];
+  cars.forEach((car, i) => {
+    const cid = genUUIDv4();
+    const cols = ['id','dealer_id','brand','model','year','trim','body_type',
+      'condition','status','origin','price_usd','price_currency','fuel_type','transmission'];
+    const vals = [cid, dealerUUID,
+      car.brand||'Autre', car.model||'', car.year||null, car.trim||null,
+      car.body_type||'SUV','new','available','imported',
+      car.price_usd||null,'USD', car.fuel_type||'Essence', car.transmission||null];
+    if (car.description) { cols.push('description'); vals.push(car.description); }
+    if (car.price_fob)   { cols.push('price_fob');   vals.push(car.price_fob); }
+    if (car.engine_size) { cols.push('engine_size'); vals.push(car.engine_size); }
+    if (car.color)       { cols.push('color');       vals.push(car.color); }
+    if (car.doors)       { cols.push('doors');       vals.push(car.doors); }
+    if (car.negotiable)  { cols.push('negotiable');  vals.push(true); }
+    const eqVals = [cid, ...SQL_EQ_COLS.map(k => car.equipment?.[k] || false)];
+    lines.push(`-- [${i+1}] ${car.brand||'?'} ${car.model||'?'} | ${car.trim||'—'} | ${car.color||'no color'} | $${car.price_usd||'?'}`);
+    lines.push(`INSERT INTO cars (${cols.join(', ')})`);
+    lines.push(`VALUES (${vals.map(sqlEsc).join(', ')});`);
+    lines.push(`INSERT INTO car_equipment (car_id, ${SQL_EQ_COLS.join(', ')})`);
+    lines.push(`VALUES (${eqVals.map(sqlEsc).join(', ')});\n`);
+  });
+  return lines.join('\n');
+};
+
+const SYSTEM_PROMPT = `You are a car database assistant for a platform managing car dealers importing cars to Algeria. Parse raw dealer price list text and return a JSON array of car objects.
+
+Each object must have: brand, model, year (int or null), trim, body_type (one of: SUV/Berline/Hatchback/Coupé/Cabriolet/Wagon/Pickup/Monospace/Autre), price_usd (number), price_fob (number or null), fuel_type (Essence/Diesel/Hybride/Électrique/GPL), transmission (Manuelle/Automatique/CVT/DSG-DCT/PDK/Tiptronic/EDC/Autre), engine_size (string or null), color (one of: Noir/Blanc/Gris/Argent/Bleu/Rouge/Vert/Orange/Beige/Marron/Or/Rose/Violet — or null), doors (int or null), negotiable (false), description (brief notes), equipment (object with booleans: sun_roof/leather_seat/alloy_wheel/abs/driver_airbag/camera_360/adaptive_cruise/auto_ac/power_window/power_seat/seat_heating/seat_ventilation/tv/cd_dvd).
+
+CRITICAL RULES:
+1. white/gray → TWO objects: color "Blanc" + color "Gris" (same price)
+2. black/silver → TWO objects: color "Noir" + color "Argent" (same price)
+3. Multiple trims at different prices → one object per trim
+4. sun_roof=true if text mentions sunroof
+5. FOB price → set BOTH price_usd AND price_fob to that number
+6. MT→Manuelle, AT→Automatique, DCT→DSG-DCT
+7. Body type inference: X3 Pro/Coolray/Seltos/GS3/GS5/Dashing→SUV, MG5/i5/Roewe i5→Berline
+8. Return ONLY a valid JSON array starting with [ and ending with ]. No markdown, no explanation.`;
+
+const SQLGeneratorPage = ({showToast}) => {
+  const [dealerName, setDealerName] = useState('');
+  const [dealerUUID, setDealerUUID] = useState('');
+  const [rawText,    setRawText]    = useState('');
+  const [loading,    setLoading]    = useState(false);
+  const [sql,        setSql]        = useState('');
+  const [stats,      setStats]      = useState(null);
+  const [history,    setHistory]    = useState(() => {
+    try { return JSON.parse(localStorage.getItem('ewg_history') || '[]'); } catch { return []; }
+  });
+  const [activeTab, setActiveTab] = useState('generate');
+  const [copied,    setCopied]    = useState(false);
+
+  const saveHistory = (name, uuid, count, text, generatedSql) => {
+    const entry = { name, uuid, count, text, sql: generatedSql, date: new Date().toISOString() };
+    const next = [entry, ...history].slice(0, 20);
+    setHistory(next);
+    localStorage.setItem('ewg_history', JSON.stringify(next));
+  };
+
+  const handleGenerate = async () => {
+    if (!rawText.trim()) { showToast('Colle le texte du dealer d\'abord', 'error'); return; }
+    if (!dealerName.trim()) { showToast('Entre le nom du dealer', 'error'); return; }
+    const uuid = dealerUUID.trim() || genUUIDv4();
+    if (!dealerUUID) setDealerUUID(uuid);
+    setLoading(true); setSql(''); setStats(null);
+    try {
+      const resp = await fetch('http://localhost:3001/api/anthropic', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 8000,
+          system: SYSTEM_PROMPT,
+          messages: [{ role: 'user', content: rawText }]
+        })
+      });
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error.message);
+      const raw = (data.content?.[0]?.text || '').replace(/```json|```/g,'').trim();
+      const cars = JSON.parse(raw);
+      if (!Array.isArray(cars) || cars.length === 0) throw new Error('Aucune voiture trouvée dans le texte.');
+      const generated = buildCarSQL(cars, dealerName.trim(), uuid);
+      setSql(generated);
+      setStats({
+        total: cars.length,
+        colored: cars.filter(c=>c.color).length,
+        fob: cars.filter(c=>c.price_fob).length,
+        sunroof: cars.filter(c=>c.equipment?.sun_roof).length,
+      });
+      saveHistory(dealerName.trim(), uuid, cars.length, rawText, generated);
+      showToast(`${cars.length} voitures générées pour "${dealerName}"`, 'success');
+    } catch(e) {
+      showToast('Erreur: ' + e.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(sql).then(() => {
+      setCopied(true); setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const handleDownload = () => {
+    const blob = new Blob([sql], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${(dealerName||'dealer').toLowerCase().replace(/\s+/g,'-')}-${Date.now()}.sql`;
+    a.click();
+  };
+
+  const loadFromHistory = h => {
+    setDealerName(h.name);
+    setDealerUUID(h.uuid);
+    setRawText(h.text);
+    setSql(h.sql || '');
+    setActiveTab('generate');
+  };
+
+  const GTab = ({id, label}) => (
+    <button onClick={()=>setActiveTab(id)} style={{
+      background:'none', border:'none', padding:'8px 16px', fontSize:13, fontWeight:700,
+      color: activeTab===id ? '#e8001d' : '#9a9a9a', cursor:'pointer',
+      borderBottom: activeTab===id ? '2px solid #e8001d' : '2px solid transparent',
+      marginBottom:-1, transition:'color .15s',
+    }}>{label}</button>
+  );
+
+  const Tag = ({children}) => (
+    <span style={{display:'inline-block',background:'rgba(232,0,29,.1)',color:'#e8001d',
+      border:'1px solid rgba(232,0,29,.2)',borderRadius:4,padding:'1px 7px',
+      fontSize:11,fontWeight:700,fontFamily:'monospace',margin:'2px 2px 2px 0'}}>{children}</span>
+  );
+
+  return (
+    <div style={{padding:'86px 20px 60px',maxWidth:1200,margin:'0 auto'}}>
+      <div style={{marginBottom:20}}>
+        <h1 style={{fontSize:26,fontWeight:900,marginBottom:4}}>🛠 SQL <span style={{color:'#e8001d'}}>Generator</span></h1>
+        <p style={{color:'#9a9a9a',fontSize:13}}>Colle le texte brut d'un dealer — l'IA génère les INSERT SQL prêts à exécuter dans Supabase.</p>
+      </div>
+
+      <div className="sqlgen-grid" style={{display:'grid',gridTemplateColumns:'1fr 340px',gap:20,alignItems:'start'}}>
+        {/* LEFT */}
+        <div>
+          {/* Tabs */}
+          <div style={{borderBottom:'1px solid #e5e5e5',marginBottom:16,display:'flex'}}>
+            <GTab id="generate" label="Générer SQL"/>
+            <GTab id="history" label={`Historique (${history.length})`}/>
+          </div>
+
+          {activeTab === 'generate' && (
+            <div style={{display:'flex',flexDirection:'column',gap:14}}>
+              {/* Dealer info */}
+              <div className="card" style={{padding:18}}>
+                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12,paddingBottom:8,borderBottom:'1px solid #e5e5e5'}}>
+                  <div style={{width:3,height:15,background:'#e8001d',borderRadius:2,flexShrink:0}}/>
+                  <h3 style={{fontSize:13,fontWeight:800,textTransform:'uppercase',letterSpacing:'.06em'}}>Informations dealer</h3>
+                </div>
+                <div className="sqlgen-dealer-row" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                  <div>
+                    <label className="lbl">Nom du dealer *</label>
+                    <input className="f" value={dealerName} onChange={e=>setDealerName(e.target.value)} placeholder="ex: Lucas"/>
+                  </div>
+                  <div>
+                    <label className="lbl">UUID dealer (optionnel)</label>
+                    <input className="f" value={dealerUUID} onChange={e=>setDealerUUID(e.target.value)} placeholder="Auto-généré" style={{fontFamily:'monospace',fontSize:11}}/>
+                  </div>
+                </div>
+              </div>
+
+              {/* Text input */}
+              <div className="card" style={{padding:18}}>
+                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12,paddingBottom:8,borderBottom:'1px solid #e5e5e5'}}>
+                  <div style={{width:3,height:15,background:'#e8001d',borderRadius:2,flexShrink:0}}/>
+                  <h3 style={{fontSize:13,fontWeight:800,textTransform:'uppercase',letterSpacing:'.06em'}}>Texte brut du dealer</h3>
+                </div>
+                <textarea className="f" value={rawText} onChange={e=>setRawText(e.target.value)}
+                  rows={12} style={{resize:'vertical',fontFamily:'monospace',fontSize:12,lineHeight:1.65}}
+                  placeholder={"- livan x3 pro MT / CVT\n  MT：7600$ (white/gray)\n  7700$ (black/silver)\n- MG5 MT 2023 edition 7700$\n- Geely coolray super MT 8800$ (gray stock ready on port)\n- Jetour dashing 2026 full option 17800$ (English system)\n..."}/>
+              </div>
+
+              {/* Generate button */}
+              <button className="btn-red" onClick={handleGenerate} disabled={loading}
+                style={{padding:14,fontSize:14,justifyContent:'center',width:'100%'}}>
+                {loading ? '⏳ Génération en cours...' : '⚡ Générer SQL'}
+              </button>
+
+              {/* Stats */}
+              {stats && (
+                <div className="sqlgen-stats" style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8}}>
+                  {[
+                    {n:stats.total,   l:'Voitures'},
+                    {n:stats.colored, l:'Avec couleur'},
+                    {n:stats.fob,     l:'Prix FOB'},
+                    {n:stats.sunroof, l:'Toit ouvrant'},
+                  ].map(s=>(
+                    <div key={s.l} className="card" style={{padding:'10px 14px',textAlign:'center'}}>
+                      <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:26,color:'#e8001d',lineHeight:1}}>{s.n}</div>
+                      <div style={{fontSize:10,color:'#9a9a9a',fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',marginTop:2}}>{s.l}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* SQL output */}
+              {sql && (
+                <div className="card" style={{padding:18}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+                    <h3 style={{fontSize:13,fontWeight:800,textTransform:'uppercase',letterSpacing:'.06em'}}>SQL Généré</h3>
+                    <div style={{display:'flex',gap:8}}>
+                      <button className="btn-out" onClick={handleDownload} style={{fontSize:11,padding:'6px 12px'}}>⬇ .sql</button>
+                      <button className="btn-out" onClick={handleCopy} style={{fontSize:11,padding:'6px 12px',color:copied?'#16a34a':'inherit',borderColor:copied?'#a7f3d0':'inherit'}}>
+                        {copied ? '✓ Copié !' : '⎘ Copier'}
+                      </button>
+                    </div>
+                  </div>
+                  <pre style={{background:'#1c1c1c',color:'#e2e8f0',borderRadius:8,padding:16,
+                    fontSize:11,fontFamily:'monospace',lineHeight:1.75,
+                    overflowX:'auto',maxHeight:480,overflowY:'auto',
+                    border:'1px solid #2e2e2e',whiteSpace:'pre'}}>{sql}</pre>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'history' && (
+            <div className="card" style={{padding:18}}>
+              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12,paddingBottom:8,borderBottom:'1px solid #e5e5e5'}}>
+                <div style={{width:3,height:15,background:'#e8001d',borderRadius:2,flexShrink:0}}/>
+                <h3 style={{fontSize:13,fontWeight:800,textTransform:'uppercase',letterSpacing:'.06em'}}>Historique des générations</h3>
+              </div>
+              {history.length === 0 ? (
+                <div style={{textAlign:'center',padding:40,color:'#9a9a9a'}}>
+                  <div style={{fontSize:28,marginBottom:8}}>🕐</div>
+                  <p style={{fontWeight:700}}>Aucun historique</p>
+                  <p style={{fontSize:12,marginTop:4}}>Génère ton premier SQL pour le voir ici.</p>
+                </div>
+              ) : history.map((h,i) => (
+                <div key={i} onClick={()=>loadFromHistory(h)}
+                  style={{display:'flex',justifyContent:'space-between',alignItems:'center',
+                    padding:'11px 14px',borderRadius:8,border:'1px solid #e5e5e5',
+                    marginBottom:8,cursor:'pointer',transition:'border-color .15s,background .15s'}}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor='#bbb';e.currentTarget.style.background='#fafafa';}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor='#e5e5e5';e.currentTarget.style.background='';}}
+                >
+                  <div>
+                    <div style={{fontWeight:800,fontSize:14,marginBottom:2}}>{h.name}</div>
+                    <div style={{fontSize:11,color:'#9a9a9a'}}>
+                      {new Date(h.date).toLocaleString('fr-DZ')}
+                      <span style={{fontFamily:'monospace',marginLeft:8,fontSize:10}}>{h.uuid?.slice(0,13)}...</span>
+                    </div>
+                  </div>
+                  <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:28,color:'#e8001d'}}>{h.count}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT: Info panel */}
+        <div className="sqlgen-info" style={{position:'sticky',top:96,display:'flex',flexDirection:'column',gap:12}}>
+          <div className="card" style={{padding:16}}>
+            <div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.08em',color:'#9a9a9a',marginBottom:10}}>Règles de l'IA</div>
+            {[
+              ['white/gray', '→ 2 lignes : Blanc + Gris'],
+              ['black/silver', '→ 2 lignes : Noir + Argent'],
+              ['MT / AT', '→ Manuelle / Automatique'],
+              ['FOB price', '→ price_usd + price_fob'],
+              ['sunroof', '→ sun_roof = TRUE'],
+              ['Trims différents', '→ 1 ligne par trim'],
+            ].map(([k,v]) => (
+              <div key={k} style={{display:'flex',gap:8,alignItems:'flex-start',marginBottom:7,fontSize:12}}>
+                <div style={{width:4,height:4,background:'#e8001d',borderRadius:'50%',flexShrink:0,marginTop:5}}/>
+                <span><span style={{fontWeight:700,fontFamily:'monospace',fontSize:11}}>{k}</span> {v}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="card" style={{padding:16}}>
+            <div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.08em',color:'#9a9a9a',marginBottom:10}}>Colonnes requises</div>
+            <div style={{fontSize:12,color:'#555',marginBottom:8}}>Vérifie que ces colonnes existent dans Supabase avant d'exécuter :</div>
+            <Tag>price_usd</Tag><Tag>price_fob</Tag><Tag>price_currency</Tag>
+            <div style={{fontSize:11,color:'#9a9a9a',marginTop:8}}>Lance <code style={{fontSize:10}}>migration_fob.sql</code> si ce n'est pas fait.</div>
+          </div>
+
+          <div className="card" style={{padding:16}}>
+            <div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.08em',color:'#9a9a9a',marginBottom:10}}>Marques supportées</div>
+            <div>
+              {['Livan','MG','GAC','Geely','Kia','Roewe','Jetour','Renault','BYD','Chery','Haval','Changan','+ autres'].map(b=>(
+                <Tag key={b}>{b}</Tag>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 export default function App() {
   const [page,    setPage]    = useState("home");
   const [cars,    setCars]    = useState([]);
@@ -1298,6 +1657,11 @@ export default function App() {
       try {
         const [c,d,s] = await Promise.all([getCars(), getDealers(), getSettings()]);
         setCars(c); setDealers(d); if (s) setSettings(s);
+        // Deep-link: ?car=UUID opens that car directly
+        if (_deepLinkCarId) {
+          const found = c.find(x => x.id === _deepLinkCarId);
+          if (found) { setSelectedCar(found); setPage("car-detail"); }
+        }
       } catch(e) { showToast("Erreur Supabase: "+e.message,"error"); }
       finally { setLoading(false); }
     };
@@ -1360,6 +1724,8 @@ export default function App() {
         return <AddCarPage {...p} dealers={dealers} onAdd={handleAddCar}/>;
       case "export":
         return <ExportPage {...p} cars={cars} dealers={dealers}/>;
+      case "sql-gen":
+        return <SQLGeneratorPage showToast={showToast}/>;
       case "settings":
         return <SettingsPage {...p} setSettings={setSettings}/>;
       default:
