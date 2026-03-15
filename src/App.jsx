@@ -105,7 +105,7 @@ const getUSD = (car, s) => {
 const G = `
 @import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@600;700;800;900&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-:root{--red:#e8001d;--red2:#c0001a;--dark:#1c1c1c;--gray:#f2f2f2;--gray2:#e5e5e5;--gray4:#9a9a9a;--border:#ddd;--text:#1c1c1c;--text2:#555;}
+:root{--red:#d36135;--red2:#c0001a;--dark:#1c1c1c;--gray:#f2f2f2;--gray2:#e5e5e5;--gray4:#9a9a9a;--border:#ddd;--text:#1c1c1c;--text2:#555;}
 body{font-family:'Barlow',sans-serif;background:var(--gray);color:var(--text);min-height:100vh;}
 h1,h2,h3,h4{font-family:'Barlow Condensed',sans-serif;}
 ::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:#ebebeb;}::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px;}
@@ -195,7 +195,7 @@ const CarSVG = ({size=80}) => (
 
 const Spinner = () => (
   <div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:80}}>
-    <div style={{width:32,height:32,border:"3px solid #e5e5e5",borderTopColor:"#e8001d",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
+    <div style={{width:32,height:32,border:"3px solid #e5e5e5",borderTopColor:"#d36135",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
   </div>
 );
 
@@ -234,13 +234,13 @@ const Navbar = ({page, setPage, search, setSearch}) => {
 
   return (
     <>
-      <nav style={{background:"#fff",borderBottom:"3px solid #e8001d",position:"fixed",top:0,left:0,right:0,zIndex:300,boxShadow:"0 2px 10px rgba(0,0,0,.08)"}}>
+      <nav style={{background:"#fff",borderBottom:"3px solid #d36135",position:"fixed",top:0,left:0,right:0,zIndex:300,boxShadow:"0 2px 10px rgba(0,0,0,.08)"}}>
         {/* Desktop top bar */}
         <div className="nav-top" style={{background:"#1c1c1c",padding:"4px 24px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <span style={{color:"#888",fontSize:11,fontWeight:600}}>📍 Algérie — Import direct Chine</span>
           <div style={{display:"flex",gap:20}}>
             {NAV_ITEMS.map(item=>(
-              <button key={item.id} onClick={()=>setPage(item.id)} style={{background:"none",color:page===item.id?"#e8001d":"#999",fontSize:11,fontWeight:700,padding:"2px 0",borderBottom:page===item.id?"1.5px solid #e8001d":"1.5px solid transparent"}}>{item.icon} {item.l}</button>
+              <button key={item.id} onClick={()=>setPage(item.id)} style={{background:"none",color:page===item.id?"#d36135":"#999",fontSize:11,fontWeight:700,padding:"2px 0",borderBottom:page===item.id?"1.5px solid #d36135":"1.5px solid transparent"}}>{item.icon} {item.l}</button>
             ))}
           </div>
         </div>
@@ -251,9 +251,9 @@ const Navbar = ({page, setPage, search, setSearch}) => {
             <img src="/logo.png" alt="El Warcha Auto"
               style={{height:40,width:"auto",objectFit:"contain",flexShrink:0}}
               onError={e=>{e.target.style.display="none";e.target.nextSibling.style.display="flex";}}/>
-            <div style={{display:"none",width:34,height:34,background:"#e8001d",borderRadius:6,alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🔧</div>
+            <div style={{display:"none",width:34,height:34,background:"#d36135",borderRadius:6,alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🔧</div>
             <div>
-              <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:18,lineHeight:1}}>EL WARCHA <span style={{color:"#e8001d"}}>AUTO</span></div>
+              <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:18,lineHeight:1}}>EL WARCHA <span style={{color:"#d36135"}}>AUTO</span></div>
               <div style={{fontSize:8,color:"#9a9a9a",fontWeight:700,letterSpacing:".1em"}}>IMPORT • VENTE • ALGÉRIE</div>
             </div>
           </div>
@@ -295,9 +295,9 @@ const Navbar = ({page, setPage, search, setSearch}) => {
         {/* Sidebar header */}
         <div style={{background:"#1c1c1c",padding:"16px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <div style={{width:32,height:32,background:"#e8001d",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,flexShrink:0}}>🔧</div>
+            <div style={{width:32,height:32,background:"#d36135",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,flexShrink:0}}>🔧</div>
             <div>
-              <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:17,color:"#fff",lineHeight:1}}>EL WARCHA <span style={{color:"#e8001d"}}>AUTO</span></div>
+              <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:17,color:"#fff",lineHeight:1}}>EL WARCHA <span style={{color:"#d36135"}}>AUTO</span></div>
               <div style={{fontSize:9,color:"#888",fontWeight:700,letterSpacing:".08em"}}>IMPORT • VENTE • ALGÉRIE</div>
             </div>
           </div>
@@ -310,10 +310,10 @@ const Navbar = ({page, setPage, search, setSearch}) => {
             const active = page===item.id;
             return (
               <button key={item.id} onClick={()=>navigate(item.id)}
-                style={{width:"100%",display:"flex",alignItems:"center",gap:14,padding:"13px 14px",borderRadius:10,border:"none",background:active?"#fff0f0":"transparent",color:active?"#e8001d":"#333",fontFamily:"'Barlow',sans-serif",fontSize:14,fontWeight:active?700:500,cursor:"pointer",marginBottom:4,textAlign:"left",transition:"background .15s"}}>
+                style={{width:"100%",display:"flex",alignItems:"center",gap:14,padding:"13px 14px",borderRadius:10,border:"none",background:active?"#fff0f0":"transparent",color:active?"#d36135":"#333",fontFamily:"'Barlow',sans-serif",fontSize:14,fontWeight:active?700:500,cursor:"pointer",marginBottom:4,textAlign:"left",transition:"background .15s"}}>
                 <span style={{fontSize:20,flexShrink:0}}>{item.icon}</span>
                 <span>{item.l}</span>
-                {active&&<span style={{marginLeft:"auto",width:6,height:6,background:"#e8001d",borderRadius:"50%",flexShrink:0}}/>}
+                {active&&<span style={{marginLeft:"auto",width:6,height:6,background:"#d36135",borderRadius:"50%",flexShrink:0}}/>}
               </button>
             );
           })}
@@ -321,7 +321,7 @@ const Navbar = ({page, setPage, search, setSearch}) => {
           <div style={{borderTop:"1px solid #f0f0f0",margin:"12px 0"}}/>
 
           <button onClick={()=>navigate("add-car")}
-            style={{width:"100%",display:"flex",alignItems:"center",gap:14,padding:"13px 14px",borderRadius:10,border:"none",background:"#e8001d",color:"#fff",fontFamily:"'Barlow',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",textAlign:"left"}}>
+            style={{width:"100%",display:"flex",alignItems:"center",gap:14,padding:"13px 14px",borderRadius:10,border:"none",background:"#d36135",color:"#fff",fontFamily:"'Barlow',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",textAlign:"left"}}>
             <span style={{fontSize:20,flexShrink:0}}>➕</span>
             <span>Ajouter une voiture</span>
           </button>
@@ -355,7 +355,7 @@ const SearchPanel = ({filters, setFilters, cars=[]}) => {
   return (
     <div className="card" style={{overflow:"hidden",boxShadow:"0 1px 8px rgba(0,0,0,.07)"}}>
       <div style={{background:"#1c1c1c",padding:"10px 16px",display:"flex",alignItems:"center",gap:8}}>
-        <span style={{color:"#e8001d",fontSize:18,fontWeight:900,lineHeight:1}}>|</span>
+        <span style={{color:"#d36135",fontSize:18,fontWeight:900,lineHeight:1}}>|</span>
         <span style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:17,color:"#fff",letterSpacing:".03em"}}>RECHERCHE AVANCÉE</span>
       </div>
       <div className="search-grid" style={{display:"grid",gridTemplateColumns:"1fr 270px"}}>
@@ -407,25 +407,25 @@ const SearchPanel = ({filters, setFilters, cars=[]}) => {
           </div>
           <div className="filter-sliders" style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14,marginBottom:10}}>
             <div><label className="lbl">Km max: <b>{fmt(draft.mileageMax||300000)} km</b></label>
-              <input type="range" min={0} max={300000} step={5000} value={draft.mileageMax||300000} onChange={e=>setDraft(f=>({...f,mileageMax:+e.target.value}))} style={{width:"100%",accentColor:"#e8001d"}}/></div>
+              <input type="range" min={0} max={300000} step={5000} value={draft.mileageMax||300000} onChange={e=>setDraft(f=>({...f,mileageMax:+e.target.value}))} style={{width:"100%",accentColor:"#d36135"}}/></div>
             <div><label className="lbl">Prix max CNY: <b>{fmtCNY(draft.priceMax||500000)}</b></label>
-              <input type="range" min={0} max={500000} step={5000} value={draft.priceMax||500000} onChange={e=>setDraft(f=>({...f,priceMax:+e.target.value}))} style={{width:"100%",accentColor:"#e8001d"}}/></div>
+              <input type="range" min={0} max={500000} step={5000} value={draft.priceMax||500000} onChange={e=>setDraft(f=>({...f,priceMax:+e.target.value}))} style={{width:"100%",accentColor:"#d36135"}}/></div>
             <div><label className="lbl">Prix max USD: <b>{"$"+(draft.priceMaxUSD||50000).toLocaleString("fr-DZ")}</b></label>
-              <input type="range" min={0} max={50000} step={500} value={draft.priceMaxUSD||50000} onChange={e=>setDraft(f=>({...f,priceMaxUSD:+e.target.value}))} style={{width:"100%",accentColor:"#e8001d"}}/></div>
+              <input type="range" min={0} max={50000} step={500} value={draft.priceMaxUSD||50000} onChange={e=>setDraft(f=>({...f,priceMaxUSD:+e.target.value}))} style={{width:"100%",accentColor:"#d36135"}}/></div>
           </div>
           <div style={{marginBottom:10}}>
             <label className="lbl" style={{marginBottom:6}}>Couleur (cliquer)</label>
             <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
               {COLORS_LIST.map(c=>(
                 <button key={c} title={c} onClick={()=>setDraft(f=>({...f,color:f.color===c?"":c}))}
-                  style={{width:22,height:22,borderRadius:"50%",background:COLOR_HEX[c]||"#ccc",border:draft.color===c?"3px solid #e8001d":"2px solid #d1d5db",boxShadow:draft.color===c?"0 0 0 2px #fff,0 0 0 4px #e8001d":"none",flexShrink:0,transition:"all .15s"}}/>
+                  style={{width:22,height:22,borderRadius:"50%",background:COLOR_HEX[c]||"#ccc",border:draft.color===c?"3px solid #d36135":"2px solid #d1d5db",boxShadow:draft.color===c?"0 0 0 2px #fff,0 0 0 4px #d36135":"none",flexShrink:0,transition:"all .15s"}}/>
               ))}
             </div>
           </div>
           <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:4}}>
             {eqRow1.map(k=>(
               <label key={k} style={{display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:600,cursor:"pointer",background:draft.equipment?.[k]?"#fef2f2":"#f9f9f9",padding:"4px 8px",borderRadius:5,border:"1px solid "+(draft.equipment?.[k]?"#fecaca":"#e5e5e5")}}>
-                <input type="checkbox" checked={!!draft.equipment?.[k]} onChange={()=>toggleEq(k)} style={{accentColor:"#e8001d",width:12,height:12}}/>{EQUIPMENT_LABELS[k]}
+                <input type="checkbox" checked={!!draft.equipment?.[k]} onChange={()=>toggleEq(k)} style={{accentColor:"#d36135",width:12,height:12}}/>{EQUIPMENT_LABELS[k]}
               </label>
             ))}
           </div>
@@ -434,7 +434,7 @@ const SearchPanel = ({filters, setFilters, cars=[]}) => {
             <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:6,marginBottom:4}}>
               {eqRow2.map(k=>(
                 <label key={k} style={{display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:600,cursor:"pointer",background:draft.equipment?.[k]?"#fef2f2":"#f9f9f9",padding:"4px 8px",borderRadius:5,border:"1px solid "+(draft.equipment?.[k]?"#fecaca":"#e5e5e5")}}>
-                  <input type="checkbox" checked={!!draft.equipment?.[k]} onChange={()=>toggleEq(k)} style={{accentColor:"#e8001d",width:12,height:12}}/>{EQUIPMENT_LABELS[k]}
+                  <input type="checkbox" checked={!!draft.equipment?.[k]} onChange={()=>toggleEq(k)} style={{accentColor:"#d36135",width:12,height:12}}/>{EQUIPMENT_LABELS[k]}
                 </label>
               ))}
             </div>
@@ -453,7 +453,7 @@ const SearchPanel = ({filters, setFilters, cars=[]}) => {
           <div className="brand-grid" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:4,overflowY:"auto",flex:1,maxHeight:220}}>
             {visibleBrands.map(b=>(
               <button key={b.n} onClick={()=>setDraft(f=>({...f,brand:f.brand===b.n?"":b.n}))}
-                style={{background:draft.brand===b.n?"#fff0f0":"#fff",border:"1.5px solid "+(draft.brand===b.n?"#e8001d":"#e5e5e5"),borderRadius:6,padding:"5px 2px",display:"flex",flexDirection:"column",alignItems:"center",gap:2,cursor:"pointer",transition:"all .15s",minHeight:48}}>
+                style={{background:draft.brand===b.n?"#fff0f0":"#fff",border:"1.5px solid "+(draft.brand===b.n?"#d36135":"#e5e5e5"),borderRadius:6,padding:"5px 2px",display:"flex",flexDirection:"column",alignItems:"center",gap:2,cursor:"pointer",transition:"all .15s",minHeight:48}}>
                 <div style={{width:34,height:22,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                   <BrandLogo brand={b.n} size={30}/>
                 </div>
@@ -533,7 +533,7 @@ const CarCard = ({car, settings, onClick, onCatalogue}) => {
       <div className="car-card-price" style={{width:148,flexShrink:0,borderLeft:"1px solid #e5e5e5",padding:"12px",display:"flex",flexDirection:"column",alignItems:"flex-end",justifyContent:"space-between",background:"#fafafa"}}>
         <div style={{textAlign:"right"}}>
           {car.price_fob&&<div style={{fontSize:9,color:"#0369a1",fontWeight:700,marginBottom:1}}>FOB ${new Intl.NumberFormat("fr-DZ").format(car.price_fob)}</div>}
-          <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:21,color:"#e8001d",lineHeight:1}}>
+          <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:21,color:"#d36135",lineHeight:1}}>
             {(()=>{const f=parseFloat(car.price_fob)||0;const s=parseFloat(settings?.shipment_fee_usd)||0;const t=f>0?f+s:0;return t>0?'$'+new Intl.NumberFormat('fr-DZ').format(Math.round(t)):'—';})()}
           </div>
           {dzd&&(
@@ -588,13 +588,13 @@ const HomePage = ({cars, settings, loading, setPage, setSelectedCar, setCatalogu
       <div style={{background:"linear-gradient(120deg,#1c1c1c 55%,#2a0808)",borderRadius:12,padding:"18px 22px",color:"#fff",marginBottom:14,overflow:"hidden"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
           <div>
-            <h1 style={{fontSize:28,fontWeight:900,lineHeight:1,marginBottom:3}}>EL WARCHA <span style={{color:"#e8001d"}}>AUTO</span></h1>
+            <h1 style={{fontSize:28,fontWeight:900,lineHeight:1,marginBottom:3}}>EL WARCHA <span style={{color:"#d36135"}}>AUTO</span></h1>
             <p style={{color:"#999",fontSize:12}}>Import direct depuis la Chine — Algérie</p>
           </div>
           <div className="hero-stats" style={{display:"flex",gap:18,flexShrink:0}}>
             {stats.map(s=>(
               <div key={s.l} style={{textAlign:"center"}}>
-                <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:24,color:"#e8001d",lineHeight:1}}>{s.n}</div>
+                <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:24,color:"#d36135",lineHeight:1}}>{s.n}</div>
                 <div style={{fontSize:9,color:"#999",fontWeight:700,letterSpacing:".04em"}}>{s.l}</div>
               </div>
             ))}
@@ -605,7 +605,7 @@ const HomePage = ({cars, settings, loading, setPage, setSelectedCar, setCatalogu
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,flexWrap:"wrap",gap:8}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontFamily:"'Barlow Condensed'",fontWeight:800,fontSize:16}}>{filtered.length} véhicule{filtered.length!==1?"s":""}</span>
-          {hasActive&&<span onClick={()=>{setSearch("");setFilters({...EMPTY_FILTERS});}} style={{fontSize:11,color:"#e8001d",fontWeight:700,cursor:"pointer",border:"1px solid #fecaca",background:"#fff0f0",padding:"2px 8px",borderRadius:10}}>✕ Effacer tout</span>}
+          {hasActive&&<span onClick={()=>{setSearch("");setFilters({...EMPTY_FILTERS});}} style={{fontSize:11,color:"#d36135",fontWeight:700,cursor:"pointer",border:"1px solid #fecaca",background:"#fff0f0",padding:"2px 8px",borderRadius:10}}>✕ Effacer tout</span>}
         </div>
       </div>
       {loading?<Spinner/>:filtered.length===0?(
@@ -638,10 +638,10 @@ const PhotoGrid = ({previews, onAdd, onRemove}) => {
       {previews.length>0&&(
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:8}}>
           {previews.map((src,i)=>(
-            <div key={i} style={{position:"relative",width:"100%",height:110,borderRadius:7,overflow:"hidden",border:i===0?"2px solid #e8001d":"1px solid #ddd",flexShrink:0}}>
+            <div key={i} style={{position:"relative",width:"100%",height:110,borderRadius:7,overflow:"hidden",border:i===0?"2px solid #d36135":"1px solid #ddd",flexShrink:0}}>
               <img src={src} alt="" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
               <button onClick={e=>{e.stopPropagation();onRemove(i);}} style={{position:"absolute",top:4,right:4,background:"rgba(0,0,0,.65)",color:"#fff",border:"none",borderRadius:"50%",width:20,height:20,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",padding:0,cursor:"pointer"}}>✕</button>
-              {i===0&&<div style={{position:"absolute",bottom:4,left:4,background:"#e8001d",color:"#fff",fontSize:9,fontWeight:700,padding:"1px 5px",borderRadius:3}}>PRINCIPALE</div>}
+              {i===0&&<div style={{position:"absolute",bottom:4,left:4,background:"#d36135",color:"#fff",fontSize:9,fontWeight:700,padding:"1px 5px",borderRadius:3}}>PRINCIPALE</div>}
             </div>
           ))}
           <div style={{width:"100%",height:110,borderRadius:7,border:"2px dashed #ddd",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",background:"#fafafa",gap:4}} onClick={()=>inputRef.current?.click()}>
@@ -654,11 +654,11 @@ const PhotoGrid = ({previews, onAdd, onRemove}) => {
   );
 };
 
-const FF  = ({label,required,children}) => (<div><label className="lbl">{label}{required&&<span style={{color:"#e8001d",marginLeft:3}}>*</span>}</label>{children}</div>);
+const FF  = ({label,required,children}) => (<div><label className="lbl">{label}{required&&<span style={{color:"#d36135",marginLeft:3}}>*</span>}</label>{children}</div>);
 const Sec = ({title,children}) => (
   <div className="card" style={{padding:18}}>
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,paddingBottom:8,borderBottom:"1px solid #e5e5e5"}}>
-      <div style={{width:3,height:15,background:"#e8001d",borderRadius:2,flexShrink:0}}/>
+      <div style={{width:3,height:15,background:"#d36135",borderRadius:2,flexShrink:0}}/>
       <h3 style={{fontSize:13,fontWeight:800,textTransform:"uppercase",letterSpacing:".06em"}}>{title}</h3>
     </div>
     <div style={{display:"flex",flexDirection:"column",gap:12}}>{children}</div>
@@ -715,7 +715,7 @@ const CarForm = ({initial, initialEq, dealers, settings, onSubmit, onCancel, sub
           <FF label="Kilométrage"><input className="f" type="number" value={form.mileage} onChange={set("mileage")} placeholder="45000"/></FF>
         </div>
         <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,fontWeight:600}}>
-          <input type="checkbox" checked={form.negotiable} onChange={e=>setForm(f=>({...f,negotiable:e.target.checked}))} style={{width:14,height:14,accentColor:"#e8001d"}}/>Prix négociable
+          <input type="checkbox" checked={form.negotiable} onChange={e=>setForm(f=>({...f,negotiable:e.target.checked}))} style={{width:14,height:14,accentColor:"#d36135"}}/>Prix négociable
         </label>
       </Sec>
       <Sec title="Prix">
@@ -731,7 +731,7 @@ const CarForm = ({initial, initialEq, dealers, settings, onSubmit, onCancel, sub
               </div>
               <div style={{textAlign:"right"}}>
                 <div style={{fontSize:9,color:"#9a9a9a",fontWeight:600}}>+ Transport ${shipFee}</div>
-                <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:22,color:"#e8001d"}}>${new Intl.NumberFormat("fr-DZ").format(Math.round(totalUSD))}</div>
+                <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:22,color:"#d36135"}}>${new Intl.NumberFormat("fr-DZ").format(Math.round(totalUSD))}</div>
                 <div style={{fontSize:9,color:"#9a9a9a",fontWeight:600}}>PRIX TOTAL USD</div>
               </div>
             </div>
@@ -757,7 +757,7 @@ const CarForm = ({initial, initialEq, dealers, settings, onSubmit, onCancel, sub
         <div className="eq-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(170px,1fr))",gap:6}}>
           {Object.entries(EQUIPMENT_LABELS).map(([key,label])=>(
             <label key={key} style={{display:"flex",alignItems:"center",gap:7,padding:"8px 11px",borderRadius:5,cursor:"pointer",background:eq[key]?"#f0fdf4":"#fff",border:"1px solid "+(eq[key]?"#a7f3d0":"#ddd"),transition:"all .15s"}}>
-              <input type="checkbox" checked={eq[key]||false} onChange={()=>setEq(e=>({...e,[key]:!e[key]}))} style={{accentColor:"#e8001d",width:13,height:13}}/>
+              <input type="checkbox" checked={eq[key]||false} onChange={()=>setEq(e=>({...e,[key]:!e[key]}))} style={{accentColor:"#d36135",width:13,height:13}}/>
               <span style={{fontSize:11,fontWeight:700,color:eq[key]?"#1c1c1c":"#9a9a9a"}}>{label}</span>
             </label>
           ))}
@@ -810,7 +810,7 @@ const AddCarPage = ({dealers, settings, setPage, onAdd, showToast}) => {
   return (
     <div className="page-wrap" style={{padding:"86px 20px 60px",maxWidth:800,margin:"0 auto"}}>
       <button className="btn-out" onClick={()=>setPage("home")} style={{marginBottom:14,fontSize:12}}>← Retour</button>
-      <h1 style={{fontSize:24,fontWeight:900,marginBottom:18}}>Ajouter une <span style={{color:"#e8001d"}}>Voiture</span></h1>
+      <h1 style={{fontSize:24,fontWeight:900,marginBottom:18}}>Ajouter une <span style={{color:"#d36135"}}>Voiture</span></h1>
       <CarForm initial={{...EMPTY_CAR,_existingPhotos:[]}} initialEq={{...EMPTY_EQ}} dealers={dealers} settings={settings} onSubmit={handleSubmit} onCancel={()=>setPage("home")} submitLabel="✓ Enregistrer" loading={loading}/>
     </div>
   );
@@ -831,7 +831,7 @@ const CarDetailPage = ({car, settings, setPage, onDelete, onUpdate, showToast, d
   return (
     <div style={{background:"#f2f2f2",minHeight:"100vh",paddingBottom:60}}>
       <div style={{background:"#1c1c1c",padding:"7px 24px",marginTop:86,display:"flex",alignItems:"center",gap:6,fontSize:11,color:"#888"}}>
-        <span onClick={()=>setPage("home")} style={{color:"#e8001d",cursor:"pointer",fontWeight:700}}>Accueil</span>
+        <span onClick={()=>setPage("home")} style={{color:"#d36135",cursor:"pointer",fontWeight:700}}>Accueil</span>
         <span>›</span><span style={{color:"#ccc",fontWeight:600}}>{car.brand} {car.model} {car.year}</span>
       </div>
       <div className="detail-grid" style={{maxWidth:1260,margin:"0 auto",padding:"18px 20px",display:"grid",gridTemplateColumns:"1fr 310px",gap:16,alignItems:"start"}}>
@@ -853,7 +853,7 @@ const CarDetailPage = ({car, settings, setPage, onDelete, onUpdate, showToast, d
             {photos.length>1&&(
               <div style={{display:"flex",gap:6,padding:"10px 12px",background:"#f5f5f5",borderTop:"1px solid #e5e5e5",overflowX:"auto"}}>
                 {photos.map((src,i)=>(
-                  <div key={i} onClick={()=>setActivePhoto(i)} style={{width:88,height:62,flexShrink:0,borderRadius:6,overflow:"hidden",cursor:"pointer",border:"2px solid "+(activePhoto===i?"#e8001d":"transparent"),transition:"border .15s"}}>
+                  <div key={i} onClick={()=>setActivePhoto(i)} style={{width:88,height:62,flexShrink:0,borderRadius:6,overflow:"hidden",cursor:"pointer",border:"2px solid "+(activePhoto===i?"#d36135":"transparent"),transition:"border .15s"}}>
                     <img src={src} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
                   </div>
                 ))}
@@ -895,11 +895,11 @@ const CarDetailPage = ({car, settings, setPage, onDelete, onUpdate, showToast, d
               const _ship = parseFloat(settings?.shipment_fee_usd)||0;
               const _tot  = _fob > 0 ? _fob + _ship : 0;
               return _tot > 0 ? (
-                <div style={{background:"#f2f2f2",borderRadius:8,padding:"11px 14px",marginBottom:8,borderLeft:"4px solid #e8001d"}}>
+                <div style={{background:"#f2f2f2",borderRadius:8,padding:"11px 14px",marginBottom:8,borderLeft:"4px solid #d36135"}}>
                   <div style={{fontSize:9,color:"#9a9a9a",fontWeight:700,letterSpacing:".1em",marginBottom:2}}>
                     PRIX TOTAL (FOB ${new Intl.NumberFormat("fr-DZ").format(_fob)} + Transport ${_ship})
                   </div>
-                  <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:28,color:"#e8001d",lineHeight:1}}>
+                  <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:28,color:"#d36135",lineHeight:1}}>
                     ${new Intl.NumberFormat("fr-DZ").format(Math.round(_tot))}
                   </div>
                 </div>
@@ -918,7 +918,7 @@ const CarDetailPage = ({car, settings, setPage, onDelete, onUpdate, showToast, d
             <div style={{display:"flex",flexDirection:"column",gap:5}}>
               {dealer.mobile&&<div style={{display:"flex",gap:7,fontSize:12}}>📞 <span style={{color:"#555"}}>{dealer.mobile}</span></div>}
               {dealer.email&&<div style={{display:"flex",gap:7,fontSize:12}}>✉️ <span style={{color:"#555"}}>{dealer.email}</span></div>}
-              {dealer.google_maps_link&&<a href={dealer.google_maps_link} target="_blank" rel="noreferrer" style={{display:"flex",gap:7,fontSize:12,color:"#e8001d",fontWeight:600}}>🗺️ Google Maps</a>}
+              {dealer.google_maps_link&&<a href={dealer.google_maps_link} target="_blank" rel="noreferrer" style={{display:"flex",gap:7,fontSize:12,color:"#d36135",fontWeight:600}}>🗺️ Google Maps</a>}
             </div>
           </div>}
         </div>
@@ -977,7 +977,7 @@ const EditCarPage = ({car, settings, setPage, onUpdate, showToast, onCancel, dea
   return (
     <div className="page-wrap" style={{padding:"86px 20px 60px",maxWidth:800,margin:"0 auto"}}>
       <button className="btn-out" onClick={onCancel} style={{marginBottom:14,fontSize:12}}>← Annuler</button>
-      <h1 style={{fontSize:24,fontWeight:900,marginBottom:18}}>Modifier <span style={{color:"#e8001d"}}>{car.brand} {car.model}</span></h1>
+      <h1 style={{fontSize:24,fontWeight:900,marginBottom:18}}>Modifier <span style={{color:"#d36135"}}>{car.brand} {car.model}</span></h1>
       <CarForm initial={initialForm} initialEq={initialEq} dealers={dealers} settings={settings}
         onSubmit={handleSubmit} onCancel={onCancel} submitLabel="✓ Sauvegarder" loading={loading}/>
     </div>
@@ -1036,8 +1036,8 @@ const DealerDetailPage = ({dealer, cars, settings, setPage, setSelectedCar, setS
             <div style={{display:"flex",flexWrap:"wrap",gap:12}}>
               {dealer.mobile&&<span style={{fontSize:12,color:"#555"}}>📞 {dealer.mobile}</span>}
               {dealer.email&&<span style={{fontSize:12,color:"#555"}}>✉️ {dealer.email}</span>}
-              {dealer.website&&<a href={dealer.website} target="_blank" rel="noreferrer" style={{fontSize:12,color:"#e8001d",fontWeight:600}}>🌐 Site web</a>}
-              {dealer.google_maps_link&&<a href={dealer.google_maps_link} target="_blank" rel="noreferrer" style={{fontSize:12,color:"#e8001d",fontWeight:600}}>🗺️ Maps</a>}
+              {dealer.website&&<a href={dealer.website} target="_blank" rel="noreferrer" style={{fontSize:12,color:"#d36135",fontWeight:600}}>🌐 Site web</a>}
+              {dealer.google_maps_link&&<a href={dealer.google_maps_link} target="_blank" rel="noreferrer" style={{fontSize:12,color:"#d36135",fontWeight:600}}>🗺️ Maps</a>}
             </div>
             {dealer.notes&&<p style={{fontSize:12,color:"#9a9a9a",marginTop:5}}>{dealer.notes}</p>}
           </div>
@@ -1070,7 +1070,7 @@ const AddDealerPage = ({setPage, onAdd, showToast}) => {
   return (
     <div className="page-wrap" style={{padding:"86px 20px 60px",maxWidth:600,margin:"0 auto"}}>
       <button className="btn-out" onClick={()=>setPage("dealers")} style={{marginBottom:12,fontSize:12}}>← Retour</button>
-      <h1 style={{fontSize:22,fontWeight:900,marginBottom:16}}>Nouveau <span style={{color:"#e8001d"}}>Concessionnaire</span></h1>
+      <h1 style={{fontSize:22,fontWeight:900,marginBottom:16}}>Nouveau <span style={{color:"#d36135"}}>Concessionnaire</span></h1>
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
         <Sec title="Informations">
           <FF label="Nom" required><input className="f" value={form.name} onChange={set("name")} placeholder="Ahmed Auto Alger"/></FF>
@@ -1113,7 +1113,7 @@ const EditDealerPage = ({dealer, setPage, onUpdate, showToast}) => {
   return (
     <div className="page-wrap" style={{padding:"86px 20px 60px",maxWidth:600,margin:"0 auto"}}>
       <button className="btn-out" onClick={()=>setPage("dealers")} style={{marginBottom:12,fontSize:12}}>← Retour</button>
-      <h1 style={{fontSize:22,fontWeight:900,marginBottom:16}}>Modifier <span style={{color:"#e8001d"}}>{dealer.name}</span></h1>
+      <h1 style={{fontSize:22,fontWeight:900,marginBottom:16}}>Modifier <span style={{color:"#d36135"}}>{dealer.name}</span></h1>
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
         <Sec title="Informations">
           <FF label="Nom" required><input className="f" value={form.name} onChange={set("name")} placeholder="Ahmed Auto Alger"/></FF>
@@ -1191,7 +1191,7 @@ const SettingsPage = ({settings, setSettings, showToast}) => {
               {previewCNY&&(
                 <div style={{background:"#f8f8f8",borderRadius:8,padding:"12px 14px",border:"1px solid #e5e5e5"}}>
                   <div style={{fontSize:10,color:"#9a9a9a",fontWeight:700,marginBottom:4}}>¥100 000 CNY →</div>
-                  <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:18,color:"#e8001d"}}>{fmt(previewCNY)} DZD</div>
+                  <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:18,color:"#d36135"}}>{fmt(previewCNY)} DZD</div>
                   <code style={{fontSize:9,color:"#9a9a9a",display:"block",marginTop:4}}>
                     (100K × {parseFloat(form.cny_usd_rate)||0} + {parseFloat(form.shipment_fee_usd)||0}$) × {parseFloat(form.usd_dzd_rate)||0}
                   </code>
@@ -1200,7 +1200,7 @@ const SettingsPage = ({settings, setSettings, showToast}) => {
               {previewUSD&&(
                 <div style={{background:"#f8f8f8",borderRadius:8,padding:"12px 14px",border:"1px solid #e5e5e5"}}>
                   <div style={{fontSize:10,color:"#9a9a9a",fontWeight:700,marginBottom:4}}>$20 000 USD →</div>
-                  <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:18,color:"#e8001d"}}>{fmt(previewUSD)} DZD</div>
+                  <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:18,color:"#d36135"}}>{fmt(previewUSD)} DZD</div>
                   <code style={{fontSize:9,color:"#9a9a9a",display:"block",marginTop:4}}>
                     (20K + {parseFloat(form.shipment_fee_usd)||0}$) × {parseFloat(form.usd_dzd_rate)||0}
                   </code>
@@ -1322,7 +1322,7 @@ const MobileExportConfig = ({groupBy, setGroupBy, sortBy, setSortBy, sortDir, se
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5}}>
                 {EXPORT_FIELDS.map(f=>(
                   <label key={f.k} style={{display:"flex",alignItems:"center",gap:6,fontSize:12,fontWeight:600,cursor:"pointer",padding:"5px 8px",borderRadius:5,background:selFields.includes(f.k)?"#f0fdf4":"#f9f9f9",border:"1px solid "+(selFields.includes(f.k)?"#a7f3d0":"#e5e5e5")}}>
-                    <input type="checkbox" checked={selFields.includes(f.k)} onChange={()=>toggleField(f.k)} style={{accentColor:"#e8001d",width:13,height:13}}/>{f.l}
+                    <input type="checkbox" checked={selFields.includes(f.k)} onChange={()=>toggleField(f.k)} style={{accentColor:"#d36135",width:13,height:13}}/>{f.l}
                   </label>
                 ))}
               </div>
@@ -1648,7 +1648,7 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
               : grouped.map(([gName, gcars])=>(
                 <div key={gName} style={{marginBottom:12}}>
                   <div style={{background:"#1c1c1c",color:"#fff",padding:"5px 12px",borderRadius:"6px 6px 0 0",fontSize:12,fontWeight:700,display:"flex",justifyContent:"space-between"}}>
-                    <span>{gName}</span><span style={{color:"#e8001d"}}>{gcars.length} voiture{gcars.length!==1?"s":""}</span>
+                    <span>{gName}</span><span style={{color:"#d36135"}}>{gcars.length} voiture{gcars.length!==1?"s":""}</span>
                   </div>
                   <div style={{border:"1px solid #e5e5e5",borderTop:"none",borderRadius:"0 0 6px 6px",overflow:"hidden"}}>
                     {gcars.map((car,i)=>(
@@ -1656,7 +1656,7 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
                         <span style={{fontWeight:700}}>{car.year} {car.brand} {car.model} {car.trim||""}</span>
                         <div style={{display:"flex",gap:8,alignItems:"center"}}>
                           <STag status={car.status}/>
-                          <span style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:13,color:"#e8001d"}}>
+                          <span style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:13,color:"#d36135"}}>
                             {car.price_currency==="USD"?("$"+new Intl.NumberFormat("fr-DZ").format(Math.round(car.price_usd||0))):fmtCNY(car.price_cny)}
                           </span>
                         </div>
@@ -1698,7 +1698,7 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
             <div style={{display:"flex",flexDirection:"column",gap:5}}>
               {EXPORT_FIELDS.map(f=>(
                 <label key={f.k} style={{display:"flex",alignItems:"center",gap:7,fontSize:12,fontWeight:600,cursor:"pointer",padding:"4px 6px",borderRadius:5,background:selFields.includes(f.k)?"#f0fdf4":"transparent",border:"1px solid "+(selFields.includes(f.k)?"#a7f3d0":"transparent")}}>
-                  <input type="checkbox" checked={selFields.includes(f.k)} onChange={()=>toggleField(f.k)} style={{accentColor:"#e8001d",width:13,height:13}}/>
+                  <input type="checkbox" checked={selFields.includes(f.k)} onChange={()=>toggleField(f.k)} style={{accentColor:"#d36135",width:13,height:13}}/>
                   {f.l}
                 </label>
               ))}
@@ -1800,7 +1800,7 @@ const SQLGeneratorPage = ({showToast}) => {
   };
 
   const handleGenerate = async () => {
-    if (!rawText.trim()) { showToast('Colle le texte du dealer d'abord', 'error'); return; }
+    if (!rawText.trim()) { showToast('Colle le texte du dealer d\'abord', 'error'); return; }
     if (!dealerName.trim()) { showToast('Entre le nom du dealer', 'error'); return; }
     const uuid = dealerUUID.trim() || genUUIDv4();
     if (!dealerUUID) setDealerUUID(uuid);
@@ -1863,14 +1863,14 @@ const SQLGeneratorPage = ({showToast}) => {
   const GTab = ({id, label}) => (
     <button onClick={()=>setActiveTab(id)} style={{
       background:'none', border:'none', padding:'8px 16px', fontSize:13, fontWeight:700,
-      color: activeTab===id ? '#e8001d' : '#9a9a9a', cursor:'pointer',
-      borderBottom: activeTab===id ? '2px solid #e8001d' : '2px solid transparent',
+      color: activeTab===id ? '#d36135' : '#9a9a9a', cursor:'pointer',
+      borderBottom: activeTab===id ? '2px solid #d36135' : '2px solid transparent',
       marginBottom:-1, transition:'color .15s',
     }}>{label}</button>
   );
 
   const Tag = ({children}) => (
-    <span style={{display:'inline-block',background:'rgba(232,0,29,.1)',color:'#e8001d',
+    <span style={{display:'inline-block',background:'rgba(232,0,29,.1)',color:'#d36135',
       border:'1px solid rgba(232,0,29,.2)',borderRadius:4,padding:'1px 7px',
       fontSize:11,fontWeight:700,fontFamily:'monospace',margin:'2px 2px 2px 0'}}>{children}</span>
   );
@@ -1878,7 +1878,7 @@ const SQLGeneratorPage = ({showToast}) => {
   return (
     <div style={{padding:'86px 20px 60px',maxWidth:1200,margin:'0 auto'}}>
       <div style={{marginBottom:20}}>
-        <h1 style={{fontSize:26,fontWeight:900,marginBottom:4}}>🛠 SQL <span style={{color:'#e8001d'}}>Generator</span></h1>
+        <h1 style={{fontSize:26,fontWeight:900,marginBottom:4}}>🛠 SQL <span style={{color:'#d36135'}}>Generator</span></h1>
         <p style={{color:'#9a9a9a',fontSize:13}}>Colle le texte brut d'un dealer — l'IA génère les INSERT SQL prêts à exécuter dans Supabase.</p>
       </div>
 
@@ -1896,7 +1896,7 @@ const SQLGeneratorPage = ({showToast}) => {
               {/* Dealer info */}
               <div className="card" style={{padding:18}}>
                 <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12,paddingBottom:8,borderBottom:'1px solid #e5e5e5'}}>
-                  <div style={{width:3,height:15,background:'#e8001d',borderRadius:2,flexShrink:0}}/>
+                  <div style={{width:3,height:15,background:'#d36135',borderRadius:2,flexShrink:0}}/>
                   <h3 style={{fontSize:13,fontWeight:800,textTransform:'uppercase',letterSpacing:'.06em'}}>Informations dealer</h3>
                 </div>
                 <div className="sqlgen-dealer-row" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
@@ -1914,7 +1914,7 @@ const SQLGeneratorPage = ({showToast}) => {
               {/* Text input */}
               <div className="card" style={{padding:18}}>
                 <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12,paddingBottom:8,borderBottom:'1px solid #e5e5e5'}}>
-                  <div style={{width:3,height:15,background:'#e8001d',borderRadius:2,flexShrink:0}}/>
+                  <div style={{width:3,height:15,background:'#d36135',borderRadius:2,flexShrink:0}}/>
                   <h3 style={{fontSize:13,fontWeight:800,textTransform:'uppercase',letterSpacing:'.06em'}}>Texte brut du dealer</h3>
                 </div>
                 <textarea className="f" value={rawText} onChange={e=>setRawText(e.target.value)}
@@ -1938,7 +1938,7 @@ const SQLGeneratorPage = ({showToast}) => {
                     {n:stats.sunroof, l:'Toit ouvrant'},
                   ].map(s=>(
                     <div key={s.l} className="card" style={{padding:'10px 14px',textAlign:'center'}}>
-                      <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:26,color:'#e8001d',lineHeight:1}}>{s.n}</div>
+                      <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:26,color:'#d36135',lineHeight:1}}>{s.n}</div>
                       <div style={{fontSize:10,color:'#9a9a9a',fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',marginTop:2}}>{s.l}</div>
                     </div>
                   ))}
@@ -1969,7 +1969,7 @@ const SQLGeneratorPage = ({showToast}) => {
           {activeTab === 'history' && (
             <div className="card" style={{padding:18}}>
               <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12,paddingBottom:8,borderBottom:'1px solid #e5e5e5'}}>
-                <div style={{width:3,height:15,background:'#e8001d',borderRadius:2,flexShrink:0}}/>
+                <div style={{width:3,height:15,background:'#d36135',borderRadius:2,flexShrink:0}}/>
                 <h3 style={{fontSize:13,fontWeight:800,textTransform:'uppercase',letterSpacing:'.06em'}}>Historique des générations</h3>
               </div>
               {history.length === 0 ? (
@@ -1993,7 +1993,7 @@ const SQLGeneratorPage = ({showToast}) => {
                       <span style={{fontFamily:'monospace',marginLeft:8,fontSize:10}}>{h.uuid?.slice(0,13)}...</span>
                     </div>
                   </div>
-                  <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:28,color:'#e8001d'}}>{h.count}</div>
+                  <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:28,color:'#d36135'}}>{h.count}</div>
                 </div>
               ))}
             </div>
@@ -2013,7 +2013,7 @@ const SQLGeneratorPage = ({showToast}) => {
               ['Trims différents', '→ 1 ligne par trim'],
             ].map(([k,v]) => (
               <div key={k} style={{display:'flex',gap:8,alignItems:'flex-start',marginBottom:7,fontSize:12}}>
-                <div style={{width:4,height:4,background:'#e8001d',borderRadius:'50%',flexShrink:0,marginTop:5}}/>
+                <div style={{width:4,height:4,background:'#d36135',borderRadius:'50%',flexShrink:0,marginTop:5}}/>
                 <span><span style={{fontWeight:700,fontFamily:'monospace',fontSize:11}}>{k}</span> {v}</span>
               </div>
             ))}
