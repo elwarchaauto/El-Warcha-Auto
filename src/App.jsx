@@ -2,12 +2,26 @@ import React, { useState, useEffect, useCallback } from "react";
 import { getDealers, getCars, getSettings, createDealer, updateDealer, deleteDealer, createCar, updateCar, updateSettings, deleteCar, uploadCarPhoto } from "./lib/db";
 
 const EQUIPMENT_LABELS = {
-  cd_dvd:"CD/DVD", sun_roof:"Sun Roof", leather_seat:"Leather Seat",
-  power_seat:"Power Seat", seat_heating:"Seat Heating",
-  seat_ventilation:"Seat Ventilation", alloy_wheel:"Alloy Wheel",
-  tv:"TV", power_window:"Power Window", auto_ac:"Auto A/C",
-  abs:"ABS", driver_airbag:"Driver Airbag", camera_360:"360 Camera",
-  adaptive_cruise:"Adaptive Cruise",
+  sun_roof:        "☀️ Sun Roof",
+  leather_seat:    "🪑 Cuir",
+  power_seat:      "⚡ Siège élec.",
+  seat_heating:    "🌡️ Chauf. siège",
+  seat_ventilation:"💨 Ventil. siège",
+  alloy_wheel:     "🔘 Jantes alu",
+  led_lights:      "💡 LED Lights",
+  camera_360:      "📷 360° Caméra",
+  adaptive_cruise: "🚗 Cruise Control",
+  auto_ac:         "❄️ Clim Auto",
+  abs:             "🛑 ABS",
+  driver_airbag:   "💺 Airbag",
+  power_window:    "🔲 Vitres élec.",
+  gps:             "🗺️ GPS",
+  bluetooth:       "📶 Bluetooth",
+  keyless_entry:   "🔑 Keyless Entry",
+  parking_sensors: "📡 Capteurs park.",
+  start_stop:      "🔄 Start/Stop",
+  cd_dvd:          "📀 CD/DVD",
+  tv:              "📺 Écran TV",
 };
 const FUEL_TYPES    = ["Essence","Diesel","Hybride","Électrique","GPL"];
 const TRANSMISSIONS = ["Manuelle","Automatique","CVT","DSG/DCT","PDK","Tiptronic","EDC","Autre"];
@@ -209,6 +223,7 @@ const NAV_ITEMS = [
   {id:"home",     icon:"🚗", l:"Voitures"},
   {id:"dealers",  icon:"🏢", l:"Concessionnaires"},
   {id:"export",   icon:"📄", l:"Export PDF"},
+  {id:"catalogue",icon:"🎨", l:"Catalogue"},
   {id:"sql-gen",  icon:"🛠", l:"SQL Generator"},
   {id:"settings", icon:"⚙️", l:"Paramètres"},
 ];
@@ -452,7 +467,7 @@ const SearchPanel = ({filters, setFilters, cars=[]}) => {
   );
 };
 
-const CarCard = ({car, settings, onClick}) => {
+const CarCard = ({car, settings, onClick, onCatalogue}) => {
   const _carFob = parseFloat(car.price_fob)||0;
   const _carShip = parseFloat(settings?.shipment_fee_usd)||0;
   const _carTotal = _carFob > 0 ? _carFob + _carShip : (parseFloat(car.price_usd)||0);
@@ -528,13 +543,24 @@ const CarCard = ({car, settings, onClick}) => {
             </div>
           )}
         </div>
-        <div style={{fontSize:9,color:"#9a9a9a",fontWeight:600}}>{new Date(car.created_at||Date.now()).toLocaleDateString("fr-DZ")}</div>
+        <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
+          <div style={{fontSize:9,color:"#9a9a9a",fontWeight:600}}>{new Date(car.created_at||Date.now()).toLocaleDateString("fr-DZ")}</div>
+          {onCatalogue&&<button
+            onClick={e=>{e.stopPropagation();onCatalogue(car);}}
+            title="Générer le catalogue"
+            style={{background:"#1c1c1c",border:"none",borderRadius:6,padding:"4px 8px",cursor:"pointer",display:"flex",alignItems:"center",gap:4,fontSize:10,fontWeight:700,color:"#E89A1C",whiteSpace:"nowrap",transition:"background .15s"}}
+            onMouseEnter={e=>e.currentTarget.style.background="#333"}
+            onMouseLeave={e=>e.currentTarget.style.background="#1c1c1c"}
+          >
+            🎨 Catalogue
+          </button>}
+        </div>
       </div>
     </div>
   );
 };
 
-const HomePage = ({cars, settings, loading, setPage, setSelectedCar, search, setSearch}) => {
+const HomePage = ({cars, settings, loading, setPage, setSelectedCar, setCatalogueCar, search, setSearch}) => {
   const [filters, setFilters] = useState({...EMPTY_FILTERS});
   const filtered = cars.filter(c => {
     const q = search.toLowerCase();
@@ -585,7 +611,7 @@ const HomePage = ({cars, settings, loading, setPage, setSelectedCar, search, set
       {loading?<Spinner/>:filtered.length===0?(
         <div className="card" style={{textAlign:"center",padding:60,color:"#9a9a9a"}}><div style={{fontSize:36,marginBottom:10}}>🔍</div><p style={{fontWeight:700,fontSize:15}}>Aucun véhicule trouvé</p><p style={{fontSize:12,marginTop:4}}>Modifiez vos filtres</p></div>
       ):(
-        <div className="au">{filtered.map(car=><CarCard key={car.id} car={car} settings={settings} onClick={()=>{setSelectedCar(car);setPage("car-detail");}}/>)}</div>
+        <div className="au">{filtered.map(car=><CarCard key={car.id} car={car} settings={settings} onClick={()=>{setSelectedCar(car);setPage("car-detail");}} onCatalogue={car=>{setCatalogueCar(car);setPage("catalogue");}}/>)}</div>
       )}
     </div>
   );
@@ -1024,7 +1050,7 @@ const DealerDetailPage = ({dealer, cars, settings, setPage, setSelectedCar, setS
       <h2 style={{fontSize:17,fontWeight:800,marginBottom:12}}>Véhicules <span style={{color:"#9a9a9a",fontWeight:500,fontSize:13}}>({dc.length})</span></h2>
       {dc.length===0
         ?<div className="card" style={{textAlign:"center",padding:48,color:"#9a9a9a"}}><div style={{fontSize:30,marginBottom:8}}>🚗</div><p style={{fontWeight:700}}>Aucun véhicule pour ce concessionnaire</p></div>
-        :dc.map(car=><CarCard key={car.id} car={car} settings={settings} onClick={()=>{setSelectedCar(car);setPage("car-detail");}}/>)
+        :dc.map(car=><CarCard key={car.id} car={car} settings={settings} onClick={()=>{setSelectedCar(car);setPage("car-detail");}} onCatalogue={car=>{setCatalogueCar(car);setPage("catalogue");}}/>)
       }
     </div>
   );
@@ -1689,9 +1715,7 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
 // ============================================================
 // SQL GENERATOR PAGE
 // ============================================================
-const SQL_EQ_COLS = ['cd_dvd','sun_roof','leather_seat','power_seat','seat_heating',
-  'seat_ventilation','alloy_wheel','tv','power_window','auto_ac',
-  'abs','driver_airbag','camera_360','adaptive_cruise'];
+const SQL_EQ_COLS = ['sun_roof','leather_seat','power_seat','seat_heating','seat_ventilation','alloy_wheel','led_lights','camera_360','adaptive_cruise','auto_ac','abs','driver_airbag','power_window','gps','bluetooth','keyless_entry','parking_sensors','start_stop','cd_dvd','tv'];
 
 const sqlEsc = v => {
   if (v === null || v === undefined) return 'NULL';
@@ -2017,12 +2041,668 @@ const SQLGeneratorPage = ({showToast}) => {
 };
 
 
+// ═══════════════════════════════════════════════════════════════════════════
+// CATALOGUE PAGE
+// ═══════════════════════════════════════════════════════════════════════════
+const CATALOGUE_CSS = `
+  .cat-pg{background:#060D17;min-height:100vh;padding-top:110px;display:flex;overflow:hidden;}
+  .cat-panel{width:360px;min-width:360px;background:linear-gradient(180deg,#0d1b2a,#0a1622);border-right:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;overflow:hidden;height:calc(100vh - 110px);position:sticky;top:110px;}
+  .cat-ptabs{display:flex;flex-shrink:0;background:rgba(0,0,0,0.2);border-bottom:1px solid rgba(255,255,255,0.06);}
+  .cat-ptab{flex:1;padding:12px 0;text-align:center;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.35);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;}
+  .cat-ptab.on{color:#E89A1C;border-bottom-color:#E89A1C;}
+  .cat-pbody{flex:1;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:16px;}
+  .cat-pbody::-webkit-scrollbar{width:3px;} .cat-pbody::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);}
+  .cat-tp{display:none;flex-direction:column;gap:14px;} .cat-tp.on{display:flex;}
+  .cat-sh{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#E89A1C;opacity:.85;margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+  .cat-sh::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(232,154,28,0.3),transparent);}
+  .cat-r2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .cat-r3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+  .cat-fld{display:flex;flex-direction:column;gap:4px;}
+  .cat-fld label{font-size:8px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:rgba(255,255,255,0.38);}
+  .cat-fld input,.cat-fld select,.cat-fld textarea{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:8px 11px;font-family:'Barlow',sans-serif;font-size:12px;font-weight:500;color:#fff;outline:none;transition:border-color .15s;resize:vertical;width:100%;}
+  .cat-fld input:focus,.cat-fld select:focus,.cat-fld textarea:focus{border-color:#E89A1C;background:rgba(232,154,28,0.04);}
+  .cat-fld select option{background:#111e2e;}
+  .cat-lz{border:2px dashed rgba(255,255,255,0.1);border-radius:10px;padding:10px 13px;display:flex;align-items:center;gap:12px;cursor:pointer;position:relative;overflow:hidden;transition:all .2s;background:rgba(255,255,255,0.02);}
+  .cat-lz:hover{border-color:#E89A1C;background:rgba(232,154,28,0.06);}
+  .cat-lz input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+  .cat-lzprev{width:64px;height:34px;border-radius:6px;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;}
+  .cat-ig{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;}
+  .cat-isl{aspect-ratio:4/3;border:2px dashed rgba(255,255,255,0.1);border-radius:9px;position:relative;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;transition:all .2s;background:rgba(255,255,255,0.02);}
+  .cat-isl:hover{border-color:#E89A1C;background:rgba(232,154,28,0.05);}
+  .cat-isl input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+  .cat-isl .pv{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:7px;z-index:2;}
+  .cat-isl .ilbl{font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.22);}
+  .cat-cks{display:flex;flex-wrap:wrap;gap:6px;}
+  .cat-ck{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:rgba(255,255,255,0.5);background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:5px 11px;cursor:pointer;transition:all .15s;user-select:none;}
+  .cat-ck.on{background:rgba(232,154,28,0.14);border-color:rgba(232,154,28,0.4);color:#E89A1C;}
+  .cat-swr{display:flex;flex-wrap:wrap;gap:7px;align-items:center;}
+  .cat-csw{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid rgba(255,255,255,0.08);transition:transform .15s,border-color .15s;flex-shrink:0;}
+  .cat-csw.on{transform:scale(1.22);border-color:rgba(255,255,255,0.6);}
+  .cat-preview{flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;align-items:center;padding:24px 16px 60px;gap:16px;}
+  .cat-preview::-webkit-scrollbar{width:3px;}
+  .cat-outer{width:860px;transform-origin:top center;flex-shrink:0;}
+  .cat-actions{display:flex;gap:10px;align-items:center;flex-shrink:0;padding:12px 14px;border-top:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.2);}
+  .cat-btn{display:inline-flex;align-items:center;gap:7px;border:none;border-radius:9px;padding:0 18px;height:36px;font-family:'Barlow',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .18s;white-space:nowrap;letter-spacing:.5px;}
+  .cat-btn-gold{background:linear-gradient(135deg,#E89A1C,#C47A0A);color:#fff;box-shadow:0 4px 16px rgba(232,154,28,0.3);flex:1;justify-content:center;}
+  .cat-btn-gold:hover{box-shadow:0 6px 22px rgba(232,154,28,0.5);transform:translateY(-1px);}
+  .cat-btn-out{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#fff;}
+  .cat-btn-out:hover{background:rgba(255,255,255,0.1);}
+  .cat-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:60px 20px;text-align:center;color:rgba(255,255,255,0.15);}
+  .cat-empty p{font-size:13px;line-height:1.7;}
+  @media(max-width:900px){.cat-panel{display:none;} .cat-preview{padding:16px 8px 60px;}}
+`;
+
+/* ── SVG icons ── */
+const CI = {
+  gear:`<svg viewBox="0 0 24 24" fill="none" width="26" height="26"><circle cx="12" cy="12" r="9" stroke="white" stroke-width="1.4"/><circle cx="12" cy="12" r="3.5" stroke="white" stroke-width="1.2"/><line x1="12" y1="3" x2="12" y2="8.5" stroke="white" stroke-width="1.2"/><line x1="4.4" y1="16.5" x2="8.8" y2="14" stroke="white" stroke-width="1.2"/><line x1="19.6" y1="16.5" x2="15.2" y2="14" stroke="white" stroke-width="1.2"/></svg>`,
+  fuel:`<svg viewBox="0 0 24 24" fill="none" width="26" height="26"><path d="M5 20V7C5 6 6 5 7 5H15C16 5 17 6 17 7V12L20 15V20H5Z" stroke="white" stroke-width="1.4"/><line x1="8" y1="9" x2="14" y2="9" stroke="white" stroke-width="1.2"/><line x1="8" y1="12" x2="14" y2="12" stroke="white" stroke-width="1.2"/></svg>`,
+  eng:`<svg viewBox="0 0 24 24" fill="none" width="26" height="26"><rect x="3" y="7" width="14" height="10" rx="2" stroke="white" stroke-width="1.4"/><path d="M17 10H21V14H17" stroke="white" stroke-width="1.2"/><path d="M7 7V4H10V7" stroke="white" stroke-width="1.2"/><line x1="3" y1="10" x2="1" y2="10" stroke="white" stroke-width="1.2" stroke-linecap="round"/><line x1="3" y1="14" x2="1" y2="14" stroke="white" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+  spd:`<svg viewBox="0 0 24 24" fill="none" width="26" height="26"><circle cx="12" cy="12" r="9" stroke="white" stroke-width="1.4"/><path d="M6.5 17C6.5 17 8.5 12 12 12C15.5 12 17.5 17 17.5 17" stroke="white" stroke-width="1.2" fill="none"/><line x1="12" y1="3" x2="12" y2="5.5" stroke="white" stroke-width="1.2" stroke-linecap="round"/><line x1="12" y1="12" x2="9.8" y2="8.5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+};
+
+// EQUIPS is derived from EQUIPMENT_LABELS so keys always match DB
+const EQUIPS = Object.entries(EQUIPMENT_LABELS).map(([k,v]) => ({key:k, label:v}));
+const SWATCH_COLORS = ['#ffffff','#1a1a1a','#888888','#C0C0C0','#1a3a7a','#8B0000','#2d6a1a','#8B4513'];
+
+const CataloguePage = ({initialCar=null}) => {
+  const [tab, setTab] = useState(0);
+  const carToForm = (car) => {
+    if (!car) return {make:'',model:'',year:'',body:'',cond:'',price:'',status:'',phone:'0795505722',fb:'EL Warcha Auto',ig:'el.warcha.auto',desc:'',engine:'',power:'',fuel:'',gear:'',drive:'',km:'',doors:'',seats:'',colorname:''};
+    const fob = parseFloat(car.price_fob)||0;
+    return {
+      make:  car.brand||'',
+      model: car.model||'',
+      year:  car.year ? String(car.year) : '',
+      body:  car.body_type||'',
+      cond:  car.condition==='new'?'Neuf':car.condition==='used'?'Occasion':'',
+      price: fob>0 ? '$ '+String(Math.round(fob)).replace(/\B(?=(\d{3})+(?!\d))/g,' ')+' FOB' : '',
+      status: car.status==='available'?'En stock':car.status==='reserved'?'Sur commande':car.status==='sold'?'Vendu':'',
+      phone: '0795505722', fb:'EL Warcha Auto', ig:'el.warcha.auto',
+      desc:  car.description||'',
+      engine:car.engine_size||'',
+      power: '',
+      fuel:  car.fuel_type||'',
+      gear:  car.transmission||'',
+      drive: '',
+      km:    car.mileage ? String(car.mileage)+' km' : '0 km',
+      doors: car.doors ? String(car.doors) : '',
+      seats: '',
+      colorname: car.color||'',
+    };
+  };
+  const carToEquips = (car) => {
+    const eq = car?.car_equipment?.[0]||{};
+    // Use DB keys directly — same as EQUIPMENT_LABELS
+    return new Set(Object.keys(EQUIPMENT_LABELS).filter(k => eq[k]));
+  };
+  const carToColors = (car) => {
+    const hexMap = {Blanc:'#ffffff',Gris:'#888888',Noir:'#1a1a1a',Argent:'#C0C0C0',Bleu:'#1a3a7a',Rouge:'#8B0000',Vert:'#2d6a1a',Marron:'#8B4513'};
+    const c = car?.color;
+    return new Set(c && hexMap[c] ? [hexMap[c]] : ['#ffffff']);
+  };
+
+  const carToImgs = (car) => {
+    if (!car) return {};
+    const photos = car.photos||[];
+    const keys = ['front','rear','side-r','side-l','int1','int2'];
+    const result = {};
+    photos.forEach((url, i) => { if (url && keys[i]) result[keys[i]] = url; });
+    return result;
+  };
+
+  const [form, setForm] = useState(()=>carToForm(initialCar));
+  const [logoB64, setLogoB64] = useState(null);
+  const [imgs, setImgs] = useState(()=>carToImgs(initialCar));
+  const [equips, setEquips] = useState(()=>carToEquips(initialCar));
+  const [colors, setColors] = useState(()=>carToColors(initialCar));
+  const [generated, setGenerated] = useState(!!initialCar);
+  const [exporting, setExporting] = useState(false);
+  const catRef = React.useRef(null);
+  const outerRef = React.useRef(null);
+  const previewRef = React.useRef(null);
+
+  const sf = k => e => setForm(f => ({...f, [k]: e.target.value}));
+
+  const handleLogo = e => {
+    const file = e.target.files[0]; if (!file) return;
+    const r = new FileReader();
+    r.onload = ev => setLogoB64(ev.target.result);
+    r.readAsDataURL(file);
+  };
+
+  const handleImg = (key, e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const r = new FileReader();
+    r.onload = ev => setImgs(prev => ({...prev, [key]: ev.target.result}));
+    r.readAsDataURL(file);
+  };
+
+  const toggleEquip = eq => setEquips(prev => {
+    const n = new Set(prev);
+    n.has(eq) ? n.delete(eq) : n.add(eq);
+    return n;
+  });
+
+  const toggleColor = c => setColors(prev => {
+    const n = new Set(prev);
+    n.has(c) ? n.delete(c) : n.add(c);
+    return n;
+  });
+
+  React.useEffect(() => {
+    if (!outerRef.current || !previewRef.current || !generated) return;
+    const scale = () => {
+      const w = previewRef.current.clientWidth - 32;
+      const s = Math.min(1, w / 860);
+      outerRef.current.style.transform = `scale(${s})`;
+      outerRef.current.style.height = (catRef.current.offsetHeight * s) + 'px';
+    };
+    scale();
+    window.addEventListener('resize', scale);
+    return () => window.removeEventListener('resize', scale);
+  }, [generated]);
+
+  const stripItems = [
+    form.price && {icon: CI.gear, lbl:'Prix', val: form.price, gold: true},
+    form.gear  && {icon: CI.gear, lbl:'Boîte', val: form.gear},
+    form.fuel  && {icon: CI.fuel, lbl:'Carburant', val: form.fuel},
+    form.engine&& {icon: CI.eng,  lbl:'Moteur', val: form.engine},
+    form.km    && {icon: CI.spd,  lbl:'Kilométrage', val: form.km},
+  ].filter(Boolean);
+
+  const specRows = [
+    ['Marque', form.make.toUpperCase()], ['Modèle', form.model.toUpperCase()],
+    ['Année', form.year], ['Carrosserie', form.body],
+    ['Moteur', form.engine], ['Puissance', form.power],
+    ['Boîte', form.gear], ['Carburant', form.fuel],
+    ['Kilométrage', form.km], ['Portes', form.doors],
+    ['Places', form.seats], ['Traction', form.drive], ['Condition', form.cond],
+  ].filter(r => r[1]);
+
+  const galKeys = Object.keys(imgs).filter(k => imgs[k]);
+
+  const exportPDF = async () => {
+    if (!catRef.current) return;
+    setExporting(true);
+    try {
+      if (!window.html2canvas) {
+        await new Promise((res, rej) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+          s.onload = res; s.onerror = rej;
+          document.head.appendChild(s);
+        });
+      }
+      if (!window.jspdf) {
+        await new Promise((res, rej) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+          s.onload = res; s.onerror = rej;
+          document.head.appendChild(s);
+        });
+      }
+      const prev = outerRef.current.style.transform;
+      outerRef.current.style.transform = 'scale(1)';
+      outerRef.current.style.height = 'auto';
+      await new Promise(r => setTimeout(r, 300));
+      const canvas = await window.html2canvas(catRef.current, {
+        scale: 3, useCORS: true, allowTaint: true,
+        backgroundColor: '#0A1520', logging: false,
+        windowWidth: 860, windowHeight: catRef.current.scrollHeight,
+      });
+      outerRef.current.style.transform = prev;
+      outerRef.current.style.height = '';
+      const { jsPDF } = window.jspdf;
+      const imgData = canvas.toDataURL('image/png');
+      const mmW = 210;
+      const mmH = parseFloat(((canvas.height / canvas.width) * mmW).toFixed(2));
+      const pdf = new jsPDF({ orientation: mmH > mmW ? 'portrait' : 'landscape', unit: 'mm', format: [mmW, mmH], compress: true });
+      pdf.addImage(imgData, 'PNG', 0, 0, mmW, mmH, undefined, 'FAST');
+      const name = `elwarcha_${(form.make||'catalogue').toLowerCase()}_${(form.model||'').toLowerCase()}_${form.year}`.replace(/\s+/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'') + '.pdf';
+      pdf.save(name);
+    } catch(e) { console.error(e); }
+    finally { setExporting(false); }
+  };
+
+  const IMG_SLOTS = [
+    {key:'front',lbl:'Avant ★'},{key:'rear',lbl:'Arrière ◆'},
+    {key:'side-r',lbl:'Côté D.'},{key:'side-l',lbl:'Côté G.'},
+    {key:'int1',lbl:'Int. 1'},{key:'int2',lbl:'Int. 2'},
+  ];
+
+  return (
+    <>
+      <style>{CATALOGUE_CSS}</style>
+      <div className="cat-pg">
+
+        {/* ── LEFT PANEL ── */}
+        <div className="cat-panel">
+          <div className="cat-ptabs">
+            {['Infos','Specs','Équip.','Photos'].map((t,i)=>(
+              <div key={i} className={"cat-ptab"+(tab===i?" on":"")} onClick={()=>setTab(i)}>{t}</div>
+            ))}
+          </div>
+
+          <div className="cat-pbody">
+
+            {/* TAB 0 – Infos */}
+            {tab===0&&<div className="cat-tp on">
+              <div>
+                <div className="cat-sh">Logo</div>
+                <div className="cat-lz">
+                  <input type="file" accept="image/*" onChange={handleLogo}/>
+                  <div className="cat-lzprev">
+                    {logoB64
+                      ? <img src={logoB64} style={{width:'100%',height:'100%',objectFit:'contain'}}/>
+                      : <span style={{fontSize:11,color:'rgba(255,255,255,0.2)'}}>Logo</span>}
+                  </div>
+                  <div>
+                    <div style={{fontSize:12,fontWeight:700,color:'#fff',marginBottom:2}}>Uploader votre logo</div>
+                    <div style={{fontSize:10,color:'rgba(255,255,255,0.35)'}}>PNG transparent recommandé</div>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div className="cat-sh">Véhicule</div>
+                <div className="cat-r2">
+                  <div className="cat-fld"><label>Marque</label><input value={form.make} onChange={sf('make')} placeholder="ex: Livan"/></div>
+                  <div className="cat-fld"><label>Modèle</label><input value={form.model} onChange={sf('model')} placeholder="ex: X3 Pro"/></div>
+                </div>
+                <div className="cat-r3" style={{marginTop:8}}>
+                  <div className="cat-fld"><label>Année</label><input type="number" value={form.year} onChange={sf('year')} placeholder="2025"/></div>
+                  <div className="cat-fld"><label>Carrosserie</label>
+                    <select value={form.body} onChange={sf('body')}>
+                      <option value="">—</option>
+                      {['Berline','SUV','Crossover','Coupé','Break','Pick-Up','Cabriolet'].map(v=><option key={v}>{v}</option>)}
+                    </select>
+                  </div>
+                  <div className="cat-fld"><label>Condition</label>
+                    <select value={form.cond} onChange={sf('cond')}>
+                      <option value="">—</option>
+                      {['Neuf','Occasion','Semi-Neuf'].map(v=><option key={v}>{v}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div className="cat-sh">Prix & Contact</div>
+                <div className="cat-r2">
+                  <div className="cat-fld"><label>Prix</label><input value={form.price} onChange={sf('price')} placeholder="292 M DA"/></div>
+                  <div className="cat-fld"><label>Statut</label>
+                    <select value={form.status} onChange={sf('status')}>
+                      <option value="">—</option>
+                      {['واصلة','En stock','Sur commande','Vendu'].map(v=><option key={v}>{v}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="cat-r3" style={{marginTop:8}}>
+                  <div className="cat-fld"><label>Téléphone</label><input value={form.phone} onChange={sf('phone')}/></div>
+                  <div className="cat-fld"><label>Facebook</label><input value={form.fb} onChange={sf('fb')}/></div>
+                  <div className="cat-fld"><label>Instagram</label><input value={form.ig} onChange={sf('ig')}/></div>
+                </div>
+              </div>
+              <div>
+                <div className="cat-sh">Description</div>
+                <div className="cat-fld"><textarea value={form.desc} onChange={sf('desc')} rows={3} placeholder="Points forts, état du véhicule…"/></div>
+              </div>
+            </div>}
+
+            {/* TAB 1 – Specs */}
+            {tab===1&&<div className="cat-tp on">
+              <div>
+                <div className="cat-sh">Motorisation</div>
+                <div className="cat-r2">
+                  <div className="cat-fld"><label>Moteur</label><input value={form.engine} onChange={sf('engine')} placeholder="1.5L Turbo"/></div>
+                  <div className="cat-fld"><label>Puissance</label><input value={form.power} onChange={sf('power')} placeholder="169 ch"/></div>
+                </div>
+                <div className="cat-r2" style={{marginTop:8}}>
+                  <div className="cat-fld"><label>Carburant</label>
+                    <select value={form.fuel} onChange={sf('fuel')}>
+                      <option value="">—</option>
+                      {['Essence','Diesel','Hybride','Électrique','GPL'].map(v=><option key={v}>{v}</option>)}
+                    </select>
+                  </div>
+                  <div className="cat-fld"><label>Boîte</label>
+                    <select value={form.gear} onChange={sf('gear')}>
+                      <option value="">—</option>
+                      {['Automatique','Manuelle','CVT','Semi-auto'].map(v=><option key={v}>{v}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="cat-r2" style={{marginTop:8}}>
+                  <div className="cat-fld"><label>Traction</label>
+                    <select value={form.drive} onChange={sf('drive')}>
+                      <option value="">—</option>
+                      {['FWD','RWD','AWD','4WD'].map(v=><option key={v}>{v}</option>)}
+                    </select>
+                  </div>
+                  <div className="cat-fld"><label>Kilométrage</label><input value={form.km} onChange={sf('km')} placeholder="0 km"/></div>
+                </div>
+              </div>
+              <div>
+                <div className="cat-sh">Dimensions</div>
+                <div className="cat-r3">
+                  <div className="cat-fld"><label>Portes</label>
+                    <select value={form.doors} onChange={sf('doors')}>
+                      <option value="">—</option>
+                      {['2','3','4','5'].map(v=><option key={v}>{v}</option>)}
+                    </select>
+                  </div>
+                  <div className="cat-fld"><label>Places</label>
+                    <select value={form.seats} onChange={sf('seats')}>
+                      <option value="">—</option>
+                      {['2','4','5','7','8'].map(v=><option key={v}>{v}</option>)}
+                    </select>
+                  </div>
+                  <div className="cat-fld"><label>Couleur(s)</label><input value={form.colorname} onChange={sf('colorname')} placeholder="Blanc, Gris"/></div>
+                </div>
+              </div>
+              <div>
+                <div className="cat-sh">Couleurs disponibles</div>
+                <div className="cat-swr">
+                  {SWATCH_COLORS.map(c=>(
+                    <div key={c} className={"cat-csw"+(colors.has(c)?" on":"")} style={{background:c}} onClick={()=>toggleColor(c)}/>
+                  ))}
+                  <input type="color" style={{width:24,height:24,borderRadius:'50%',border:'none',cursor:'pointer',background:'transparent',padding:0}} onChange={e=>setColors(prev=>new Set([...prev,e.target.value]))}/>
+                </div>
+              </div>
+            </div>}
+
+            {/* TAB 2 – Équipements */}
+            {tab===2&&<div className="cat-tp on">
+              <div>
+                <div className="cat-sh">Sélectionner les équipements</div>
+                <div className="cat-cks">
+                  {EQUIPS.map(({key,label})=>(
+                    <div key={key} className={"cat-ck"+(equips.has(key)?" on":"")} onClick={()=>toggleEquip(key)}>{label}</div>
+                  ))}
+                </div>
+              </div>
+            </div>}
+
+            {/* TAB 3 – Photos */}
+            {tab===3&&<div className="cat-tp on">
+              <div>
+                <div className="cat-sh">Photos du véhicule</div>
+                <div className="cat-ig">
+                  {IMG_SLOTS.map(({key,lbl})=>(
+                    <div key={key} className="cat-isl">
+                      <input type="file" accept="image/*" onChange={e=>handleImg(key,e)}/>
+                      {imgs[key]
+                        ? <>
+                            <img className="pv" src={imgs[key]} alt={lbl}/>
+                            <div style={{position:'absolute',bottom:0,left:0,right:0,background:'rgba(0,0,0,0.55)',fontSize:7,fontWeight:700,letterSpacing:1,textTransform:'uppercase',color:'rgba(255,255,255,0.7)',padding:'3px 5px',textAlign:'center',zIndex:3}}>Remplacer</div>
+                          </>
+                        : <>
+                            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" style={{opacity:.2}}><rect x="3" y="5" width="18" height="14" rx="2" stroke="white" strokeWidth="1.5"/><circle cx="12" cy="12" r="4" stroke="white" strokeWidth="1.5"/></svg>
+                            <div className="ilbl">{lbl}</div>
+                          </>}
+                    </div>
+                  ))}
+                </div>
+                <p style={{fontSize:'8px',color:'rgba(255,255,255,0.2)',marginTop:8,textAlign:'center',lineHeight:1.6}}>★ Avant = image principale · ◆ Arrière = miniature</p>
+              </div>
+            </div>}
+
+          </div>
+
+          {/* Action buttons */}
+          <div className="cat-actions">
+            <button className="cat-btn cat-btn-gold" onClick={()=>setGenerated(true)}>
+              ✦ Générer le catalogue
+            </button>
+            {generated&&(
+              <button className="cat-btn cat-btn-out" onClick={exportPDF} disabled={exporting}>
+                {exporting ? '⏳' : '📥'} PDF
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ── PREVIEW ── */}
+        <div className="cat-preview" ref={previewRef}>
+          <div style={{fontSize:9,fontWeight:700,letterSpacing:3,textTransform:'uppercase',color:'rgba(255,255,255,0.14)',marginBottom:8}}>Aperçu live</div>
+
+          {!generated&&(
+            <div className="cat-empty">
+              <svg width="64" height="64" fill="none" viewBox="0 0 72 72" opacity=".12"><rect x="8" y="16" width="56" height="40" rx="6" stroke="white" strokeWidth="2"/><path d="M16 48C16 48 22 36 36 36C50 36 56 48 56 48" stroke="white" strokeWidth="2" fill="none"/><circle cx="36" cy="29" r="7" stroke="white" strokeWidth="2"/></svg>
+              <p style={{color:'rgba(255,255,255,0.18)'}}>Remplissez le formulaire<br/>puis cliquez sur <strong style={{color:'#E89A1C'}}>Générer</strong></p>
+            </div>
+          )}
+
+          {generated&&(
+            <div className="cat-outer" ref={outerRef}>
+              <div ref={catRef} style={{
+                width:860,
+                background:'linear-gradient(160deg,#0c1a28 0%,#08121e 40%,#0a1624 100%)',
+                borderRadius:20,overflow:'hidden',position:'relative',
+                fontFamily:"'Barlow',sans-serif",
+                boxShadow:'0 0 0 1px rgba(255,255,255,0.07),0 40px 80px rgba(0,0,0,0.5)'
+              }}>
+
+                {/* ── HEADER ── */}
+                <div style={{position:'relative',zIndex:5,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'18px 28px 15px',background:'rgba(255,255,255,0.03)',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
+                  {/* gold top line */}
+                  <div style={{position:'absolute',top:0,left:0,right:0,height:2,background:'linear-gradient(90deg,transparent,#E89A1C,transparent)',opacity:.7}}/>
+                  <div style={{display:'flex',alignItems:'center',gap:14}}>
+                    {logoB64
+                      ? <img src={logoB64} style={{height:52,maxWidth:170,objectFit:'contain'}}/>
+                      : <div style={{display:'flex',flexDirection:'column'}}>
+                          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:15,fontWeight:900,letterSpacing:'3.5px',color:'#fff',textTransform:'uppercase'}}>EL WARCHA <span style={{color:'#E89A1C'}}>AUTO</span></div>
+                          <div style={{fontSize:'8.5px',fontWeight:500,letterSpacing:'1.5px',color:'rgba(255,255,255,0.38)',marginTop:3,textTransform:'uppercase'}}>Importation Chine · Algérie</div>
+                        </div>
+                    }
+                  </div>
+                  {/* Flags */}
+                  <div style={{display:'flex',gap:7,alignItems:'center'}}>
+                    {/* China flag */}
+                    <div style={{width:44,height:28,borderRadius:5,overflow:'hidden',boxShadow:'0 2px 10px rgba(0,0,0,0.5),0 0 0 1px rgba(255,255,255,0.1)',position:'relative',background:'#DE2910',flexShrink:0}}>
+                      <svg viewBox="0 0 44 28" style={{width:'100%',height:'100%'}}>
+                        <rect fill="#DE2910" width="44" height="28"/>
+                        <text x="2" y="14" fontSize="12" fill="#FFDE00" fontFamily="serif">★</text>
+                        <text x="13" y="7"  fontSize="6"  fill="#FFDE00" fontFamily="serif">★</text>
+                        <text x="17" y="12" fontSize="6"  fill="#FFDE00" fontFamily="serif">★</text>
+                        <text x="15" y="18" fontSize="6"  fill="#FFDE00" fontFamily="serif">★</text>
+                        <text x="11" y="23" fontSize="6"  fill="#FFDE00" fontFamily="serif">★</text>
+                      </svg>
+                    </div>
+                    {/* Algeria flag */}
+                    <div style={{width:44,height:28,borderRadius:5,overflow:'hidden',boxShadow:'0 2px 10px rgba(0,0,0,0.5),0 0 0 1px rgba(255,255,255,0.1)',flexShrink:0}}>
+                      <svg viewBox="0 0 44 28" style={{width:'100%',height:'100%'}}>
+                        <rect fill="#006233" width="22" height="28"/>
+                        <rect fill="white" x="22" width="22" height="28"/>
+                        {/* Algeria: green left half, white right half */}
+                        {/* Crescent: red outer disk, white inner disk shifted right to carve */}
+                        <circle cx="23.5" cy="14" r="6.5" fill="#D21034"/>
+                        <circle cx="25.5" cy="14" r="5.2" fill="white"/>
+                        {/* Star: mathematically perfect 5-point path */}
+                        <path d="M31.0,10.5 L31.8,12.9 L34.3,12.9 L32.3,14.4 L33.1,16.8 L31.0,15.4 L28.9,16.8 L29.7,14.4 L27.7,12.9 L30.2,12.9 Z" fill="#D21034"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── HERO ── */}
+                <div style={{position:'relative',zIndex:4,minHeight:360,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+                  {/* grid bg */}
+                  <div style={{position:'absolute',inset:0,backgroundImage:'linear-gradient(rgba(255,255,255,0.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.013) 1px,transparent 1px)',backgroundSize:'48px 48px'}}/>
+                  {/* red corner */}
+                  <div style={{position:'absolute',top:0,right:0,zIndex:3,width:0,height:0,borderStyle:'solid',borderWidth:'0 130px 100px 0',borderColor:'transparent #C42B2B transparent transparent',opacity:.65}}/>
+                  {/* gold left bar */}
+                  <div style={{position:'absolute',left:0,top:0,bottom:0,zIndex:10,width:4,background:'linear-gradient(180deg,#E89A1C,#C47A0A)'}}/>
+                  {/* glow */}
+                  <div style={{position:'absolute',zIndex:1,bottom:-40,left:'46%',transform:'translateX(-50%)',width:550,height:200,background:'radial-gradient(ellipse at center,rgba(232,154,28,0.08) 0%,transparent 68%)',pointerEvents:'none'}}/>
+
+                  {/* Title */}
+                  <div style={{position:'relative',zIndex:6,padding:'24px 32px 0 36px'}}>
+                    {form.make&&<div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:700,letterSpacing:5,textTransform:'uppercase',color:'#E89A1C',opacity:.9,marginBottom:3}}>{form.make.toUpperCase()}</div>}
+                    <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:72,fontWeight:900,textTransform:'uppercase',color:'#fff',lineHeight:.9,letterSpacing:-2,textShadow:'0 2px 30px rgba(0,0,0,0.3)'}}>{form.model.toUpperCase()||'MODÈLE'}</div>
+                    {(form.body||form.year)&&<div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,fontWeight:400,color:'rgba(255,255,255,0.35)',letterSpacing:3,marginTop:6,textTransform:'uppercase'}}>{[form.body,form.year?'Model '+form.year:''].filter(Boolean).join(' · ')}</div>}
+                    {form.price&&(
+                      <div style={{display:'inline-flex',alignItems:'center',gap:14,marginTop:16,background:'rgba(255,255,255,0.06)',backdropFilter:'blur(24px)',border:'1px solid rgba(255,255,255,0.14)',borderRadius:14,padding:'11px 20px',boxShadow:'inset 0 1px 0 rgba(255,255,255,0.1),0 12px 30px rgba(0,0,0,0.25)'}}>
+                        <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:38,fontWeight:900,color:'#E89A1C',lineHeight:1,letterSpacing:-.5}}>{form.price}</span>
+                        {form.status&&<>
+                          <div style={{width:1,height:32,background:'rgba(255,255,255,0.12)'}}/>
+                          <div style={{display:'flex',flexDirection:'column',gap:1}}>
+                            <span style={{fontFamily:"'Tajawal',sans-serif",fontSize:14,color:'rgba(255,255,255,0.4)',lineHeight:1}}>{form.status}</span>
+                            <span style={{fontSize:10,fontWeight:700,letterSpacing:1,color:'rgba(255,255,255,0.25)',textTransform:'uppercase'}}>Dinar Algérien</span>
+                          </div>
+                        </>}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Car image */}
+                  <div style={{position:'relative',zIndex:6,flex:1,display:'flex',alignItems:'flex-end',justifyContent:'center',minHeight:210,padding:'0 24px 0'}}>
+                    {imgs.front
+                      ? <img src={imgs.front} style={{width:'86%',maxWidth:580,objectFit:'contain',display:'block',filter:'drop-shadow(0 20px 50px rgba(0,0,0,0.6))'}}/>
+                      : <div style={{width:'72%',height:185,border:'2px dashed rgba(255,255,255,0.08)',borderRadius:14,marginBottom:16,display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:700,letterSpacing:2,textTransform:'uppercase',color:'rgba(255,255,255,0.12)'}}>Votre photo ici</div>
+                    }
+                    {imgs.rear&&(
+                      <div style={{position:'absolute',bottom:14,right:26,width:148,height:90,background:'rgba(255,255,255,0.07)',backdropFilter:'blur(24px)',border:'1px solid rgba(255,255,255,0.16)',borderRadius:13,overflow:'hidden',boxShadow:'0 12px 28px rgba(0,0,0,0.45)'}}>
+                        <img src={imgs.rear} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* ── SPECS STRIP ── */}
+                {stripItems.length>0&&(
+                  <div style={{position:'relative',zIndex:5,background:'rgba(255,255,255,0.05)',backdropFilter:'blur(30px)',borderTop:'1px solid rgba(255,255,255,0.09)',borderBottom:'1px solid rgba(0,0,0,0.3)',padding:'0 32px',display:'flex',alignItems:'center',minHeight:76}}>
+                    {stripItems.map((s,i)=>(
+                      <React.Fragment key={i}>
+                        {i>0&&<div style={{width:1,height:44,background:'rgba(255,255,255,0.08)',flexShrink:0}}/>}
+                        <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,padding:'14px 8px',textAlign:'center'}}>
+                          <div style={{display:'flex',alignItems:'center',justifyContent:'center',marginBottom:2}} dangerouslySetInnerHTML={{__html:s.icon}}/>
+                          <div style={{fontSize:8,fontWeight:700,letterSpacing:2,textTransform:'uppercase',color:'rgba(255,255,255,0.38)',lineHeight:1}}>{s.lbl}</div>
+                          <div style={{fontSize:12,fontWeight:800,color:s.gold?'#E89A1C':'#fff',textTransform:'uppercase',letterSpacing:.5,lineHeight:1.2,marginTop:1}}>{s.val}</div>
+                        </div>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                )}
+
+                {/* ── GALLERY ── */}
+                {galKeys.length>0&&(()=>{
+                  const cols = Math.min(6,Math.max(2,galKeys.length));
+                  const h = cols>=4?110:cols===3?130:155;
+                  const LABELS = {front:'Avant',rear:'Arrière','side-r':'Côté D.','side-l':'Côté G.',int1:'Int. 1',int2:'Int. 2'};
+                  return (
+                    <div style={{display:'grid',gridTemplateColumns:`repeat(${cols},1fr)`,gap:5,padding:'12px 12px 0'}}>
+                      {galKeys.map(k=>(
+                        <div key={k} style={{position:'relative',overflow:'hidden',borderRadius:9,background:'#1a2535',height:h}}>
+                          <img src={imgs[k]} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+                          <div style={{position:'absolute',bottom:0,left:0,right:0,background:'linear-gradient(transparent,rgba(0,0,0,0.7))',fontSize:'7.5px',fontWeight:700,letterSpacing:2,textTransform:'uppercase',color:'rgba(255,255,255,0.7)',padding:'10px 7px 5px'}}>{LABELS[k]||k}</div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+
+                {/* ── BODY ── */}
+                {(specRows.length>0||equips.size>0||colors.size>0||form.desc)&&(
+                  <div style={{padding:'10px 12px 0'}}>
+                    {specRows.length>0&&(
+                      <div style={{background:'rgba(255,255,255,0.055)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:15,padding:'16px 18px',marginBottom:8,position:'relative',overflow:'hidden'}}>
+                        <div style={{position:'absolute',top:0,left:0,right:0,height:1,background:'linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent)'}}/>
+                        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,fontWeight:700,letterSpacing:3,textTransform:'uppercase',color:'#E89A1C',marginBottom:12,display:'flex',alignItems:'center',gap:8}}>
+                          Fiche technique
+                          <span style={{flex:1,height:1,background:'linear-gradient(90deg,rgba(232,154,28,0.25),transparent)',display:'block'}}/>
+                        </div>
+                        <table style={{width:'100%',borderCollapse:'collapse'}}>
+                          <tbody>
+                            {specRows.map(([k,v])=>(
+                              <tr key={k} style={{borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+                                <td style={{padding:'5px 0',fontSize:12,color:'rgba(255,255,255,0.38)',width:'44%',paddingRight:8}}>{k}</td>
+                                <td style={{padding:'5px 0',fontSize:12,fontWeight:700,color:'rgba(255,255,255,0.85)',textAlign:'right'}}>
+                                  <span style={{background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:5,padding:'1px 8px',fontSize:11}}>{v}</span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                    <div style={{display:'grid',gridTemplateColumns:equips.size>0&&colors.size>0?'1fr 1fr':'1fr',gap:8,marginBottom:form.desc?8:0}}>
+                      {equips.size>0&&(
+                        <div style={{background:'rgba(255,255,255,0.055)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:15,padding:'16px 18px',position:'relative',overflow:'hidden'}}>
+                          <div style={{position:'absolute',top:0,left:0,right:0,height:1,background:'linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent)'}}/>
+                          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,fontWeight:700,letterSpacing:3,textTransform:'uppercase',color:'#E89A1C',marginBottom:12}}>Équipements</div>
+                          <div style={{display:'flex',flexWrap:'wrap',gap:5}}>
+                            {[...equips].map(key=>(
+                              <div key={key} style={{display:'flex',alignItems:'center',gap:5,background:'rgba(232,154,28,0.1)',border:'1px solid rgba(232,154,28,0.28)',borderRadius:20,padding:'4px 12px',fontSize:11,fontWeight:700,color:'#E89A1C'}}>
+                                <div style={{width:5,height:5,borderRadius:'50%',background:'#E89A1C',flexShrink:0}}/>
+                                {EQUIPMENT_LABELS[key]||key}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {(colors.size>0||form.colorname)&&(
+                        <div style={{background:'rgba(255,255,255,0.055)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:15,padding:'16px 18px',position:'relative',overflow:'hidden'}}>
+                          <div style={{position:'absolute',top:0,left:0,right:0,height:1,background:'linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent)'}}/>
+                          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,fontWeight:700,letterSpacing:3,textTransform:'uppercase',color:'#E89A1C',marginBottom:12}}>Couleurs</div>
+                          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                            {[...colors].map(c=>(
+                              <div key={c} style={{width:24,height:24,borderRadius:'50%',background:c,border:'2px solid rgba(255,255,255,0.2)',boxShadow:'0 2px 8px rgba(0,0,0,0.4)'}}/>
+                            ))}
+                          </div>
+                          {form.colorname&&<div style={{marginTop:8,fontSize:12,fontWeight:600,color:'rgba(255,255,255,0.6)'}}>{form.colorname}</div>}
+                        </div>
+                      )}
+                    </div>
+                    {form.desc&&(
+                      <div style={{background:'rgba(255,255,255,0.055)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:15,padding:'16px 18px',position:'relative',overflow:'hidden'}}>
+                        <div style={{position:'absolute',top:0,left:0,right:0,height:1,background:'linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent)'}}/>
+                        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,fontWeight:700,letterSpacing:3,textTransform:'uppercase',color:'#E89A1C',marginBottom:12}}>Description</div>
+                        <div style={{fontSize:'12.5px',color:'rgba(255,255,255,0.5)',lineHeight:1.75}}>{form.desc}</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ── FOOTER ── */}
+                <div style={{position:'relative',zIndex:5,background:'rgba(0,0,0,0.35)',backdropFilter:'blur(24px)',borderTop:'1px solid rgba(255,255,255,0.06)',padding:'13px 28px',marginTop:12,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:18}}>
+                    {form.fb&&<div style={{display:'flex',alignItems:'center',gap:8,fontSize:'12.5px',fontWeight:700,color:'rgba(255,255,255,0.8)'}}>
+                      <div style={{width:28,height:28,borderRadius:'50%',background:'#1877F2',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                        <svg width="13" height="13" fill="white" viewBox="0 0 16 16"><path d="M9.5 3H11V1H9C7.3 1 6 2.3 6 4V5H4V7H6V15H8.5V7H10.5L11 5H8.5V4C8.5 3.4 8.9 3 9.5 3Z"/></svg>
+                      </div>
+                      {form.fb}
+                    </div>}
+                    {form.ig&&<div style={{display:'flex',alignItems:'center',gap:8,fontSize:'12.5px',fontWeight:700,color:'rgba(255,255,255,0.8)'}}>
+                      <div style={{width:28,height:28,borderRadius:'50%',background:'radial-gradient(circle at 30% 107%,#fdf497,#fd5949 45%,#d6249f 60%,#285AEB)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                        <svg width="13" height="13" fill="none" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="3.5" stroke="white" strokeWidth="1.4"/><circle cx="8" cy="8" r="3" stroke="white" strokeWidth="1.4"/><circle cx="11.5" cy="4.5" r=".8" fill="white"/></svg>
+                      </div>
+                      {form.ig}
+                    </div>}
+                    {form.phone&&<div style={{display:'flex',alignItems:'center',gap:8,fontSize:'12.5px',fontWeight:700,color:'rgba(255,255,255,0.8)'}}>
+                      <div style={{width:28,height:28,borderRadius:'50%',background:'#E89A1C',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                        <svg width="13" height="13" fill="none" viewBox="0 0 16 16"><path d="M3 2C3 2 2 2 2 3C2 4 2 7 5 10C8 13 11 14 12 14C13 14 13 13 13 13L14 11C14 10.5 13.5 10.2 11.5 9.2C11 9 10.8 9.1 10.5 9.4L10 10C10 10 9 9.5 8 8.5C7 7.5 6.5 6.5 6.5 6.5L7.1 5.9C7.4 5.6 7.5 5.4 7.3 4.9L6.3 3C6 2.5 5.5 2.5 5.5 2.5Z" stroke="white" strokeWidth="1.3" fill="none"/></svg>
+                      </div>
+                      {form.phone}
+                    </div>}
+                  </div>
+
+                </div>
+
+              </div>{/* end catRef */}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+};
+
+
 export default function App() {
   const [page,    setPage]    = useState("home");
   const [cars,    setCars]    = useState([]);
   const [dealers, setDealers] = useState([]);
   const [settings,setSettings]= useState(null);
   const [selectedCar,    setSelectedCar]    = useState(null);
+  const [catalogueCar,   setCatalogueCar]   = useState(null);
   const [selectedDealer, setSelectedDealer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [toast,   setToast]   = useState(null);
@@ -2085,7 +2765,7 @@ export default function App() {
   const renderPage = () => {
     switch(page) {
       case "home":
-        return <HomePage {...p} cars={cars} loading={loading} setSelectedCar={setSelectedCar} search={search} setSearch={setSearch}/>;
+        return <HomePage {...p} cars={cars} loading={loading} setSelectedCar={setSelectedCar} setCatalogueCar={setCatalogueCar} search={search} setSearch={setSearch}/>;
       case "car-detail":
         return selectedCar
           ? <CarDetailPage {...p} car={selectedCar} dealers={dealers}
@@ -2110,6 +2790,8 @@ export default function App() {
         return <AddCarPage {...p} dealers={dealers} onAdd={handleAddCar}/>;
       case "export":
         return <ExportPage {...p} cars={cars} dealers={dealers}/>;
+      case "catalogue":
+        return <CataloguePage initialCar={catalogueCar}/>;
       case "sql-gen":
         return <SQLGeneratorPage showToast={showToast}/>;
       case "settings":
