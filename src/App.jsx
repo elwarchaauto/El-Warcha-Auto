@@ -2251,12 +2251,13 @@ const CataloguePage = ({initialCar=null}) => {
       const wrapper = document.createElement('div');
       wrapper.style.cssText = [
         'position:fixed',
-        'top:0', 'left:0',
+        'top:0',
+        'left:-9999px',   // off-screen but fully rendered — NOT hidden
         'width:860px',
         'z-index:-9999',
         'pointer-events:none',
-        'visibility:hidden',  // invisible but still rendered at full size
         'background:#0A1520',
+        'overflow:visible',
       ].join(';');
       wrapper.appendChild(clone);
       document.body.appendChild(wrapper);
