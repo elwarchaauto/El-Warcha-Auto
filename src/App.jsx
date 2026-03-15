@@ -2525,7 +2525,7 @@ const CataloguePage = ({initialCar=null}) => {
                 </div>
 
                 {/* ── HERO ── */}
-                <div style={{position:'relative',zIndex:4,minHeight:360,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+                <div style={{position:'relative',zIndex:4,minHeight:460,display:'flex',flexDirection:'column',overflow:'hidden'}}>
                   {/* grid bg */}
                   <div style={{position:'absolute',inset:0,backgroundImage:'linear-gradient(rgba(255,255,255,0.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.013) 1px,transparent 1px)',backgroundSize:'48px 48px'}}/>
                   {/* red corner */}
@@ -2555,13 +2555,13 @@ const CataloguePage = ({initialCar=null}) => {
                   </div>
 
                   {/* Car image */}
-                  <div style={{position:'relative',zIndex:6,flex:1,display:'flex',alignItems:'flex-end',justifyContent:'center',minHeight:210,padding:'0 24px 0'}}>
+                  <div style={{position:'relative',zIndex:6,flex:1,display:'flex',alignItems:'flex-end',justifyContent:'center',minHeight:300,padding:'0 24px 0'}}>
                     {imgs.front
                       ? <img src={imgs.front} style={{width:'86%',maxWidth:580,objectFit:'contain',display:'block',filter:'drop-shadow(0 20px 50px rgba(0,0,0,0.6))'}}/>
-                      : <div style={{width:'72%',height:185,border:'2px dashed rgba(255,255,255,0.08)',borderRadius:14,marginBottom:16,display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:700,letterSpacing:2,textTransform:'uppercase',color:'rgba(255,255,255,0.12)'}}>Votre photo ici</div>
+                      : <div style={{width:'72%',height:260,border:'2px dashed rgba(255,255,255,0.08)',borderRadius:14,marginBottom:16,display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:700,letterSpacing:2,textTransform:'uppercase',color:'rgba(255,255,255,0.12)'}}>Votre photo ici</div>
                     }
                     {imgs.rear&&(
-                      <div style={{position:'absolute',bottom:14,right:26,width:148,height:90,background:'rgba(255,255,255,0.07)',backdropFilter:'blur(24px)',border:'1px solid rgba(255,255,255,0.16)',borderRadius:13,overflow:'hidden',boxShadow:'0 12px 28px rgba(0,0,0,0.45)'}}>
+                      <div style={{position:'absolute',bottom:14,right:26,width:168,height:110,background:'rgba(255,255,255,0.07)',backdropFilter:'blur(24px)',border:'1px solid rgba(255,255,255,0.16)',borderRadius:13,overflow:'hidden',boxShadow:'0 12px 28px rgba(0,0,0,0.45)'}}>
                         <img src={imgs.rear} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
                       </div>
                     )}
@@ -2587,7 +2587,7 @@ const CataloguePage = ({initialCar=null}) => {
                 {/* ── GALLERY ── */}
                 {galKeys.length>0&&(()=>{
                   const cols = Math.min(6,Math.max(2,galKeys.length));
-                  const h = cols>=4?110:cols===3?130:155;
+                  const h = cols>=4?170:cols===3?200:240;
                   const LABELS = {front:'Avant',rear:'Arrière','side-r':'Côté D.','side-l':'Côté G.',int1:'Int. 1',int2:'Int. 2'};
                   return (
                     <div style={{display:'grid',gridTemplateColumns:`repeat(${cols},1fr)`,gap:5,padding:'12px 12px 0'}}>
