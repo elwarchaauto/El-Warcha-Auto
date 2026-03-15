@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { getDealers, getCars, getSettings, createDealer, updateDealer, deleteDealer, createCar, updateCar, updateSettings, deleteCar, uploadCarPhoto } from "./lib/db";
+import { getDealers, getCars, getSettings, createDealer, updateDealer, deleteDealer, createCar, updateCar, updateSettings, deleteCar, uploadCarPhoto, getCatalogueTemplates, saveCatalogueTemplate, deleteCatalogueTemplate, uploadCatalogueAsset } from "./lib/db";
 
 const EQUIPMENT_LABELS = {
   sun_roof:        "☀️ Sun Roof",
@@ -217,7 +217,7 @@ const BrandLogo = ({brand, size=28}) => {
   const b = ALL_BRANDS.find(x=>x.n===brand);
   const [ok, setOk] = useState(true);
   if (!b?.d || !ok) return <span style={{fontSize:9,fontWeight:900,color:"#9a9a9a",lineHeight:1,textAlign:"center"}}>{(brand||"?").slice(0,5)}</span>;
-  return <img src={"https://logo.clearbit.com/"+b.d} alt={brand} width={size} height={Math.round(size*.7)} style={{objectFit:"contain"}} onError={()=>setOk(false)}/>;
+  return <img src={"https://logo.clearbit.com/"+b.d} alt={brand} width={size} height={Math.round(size*.7)} style={{objectFit:"contain"}} onError={()=>setOk(false)} referrerPolicy="no-referrer"/>;
 };
 
 const NAV_ITEMS = [
@@ -2056,24 +2056,83 @@ const SQLGeneratorPage = ({showToast}) => {
 // CATALOGUE PAGE
 // ═══════════════════════════════════════════════════════════════════════════
 const CATALOGUE_CSS = `
-  .cat-pg{background:#060D17;min-height:100vh;padding-top:110px;display:flex;overflow:hidden;}
-  .cat-panel{width:360px;min-width:360px;background:linear-gradient(180deg,#0d1b2a,#0a1622);border-right:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;overflow:hidden;height:calc(100vh - 110px);position:sticky;top:110px;}
-  .cat-ptabs{display:flex;flex-shrink:0;background:rgba(0,0,0,0.2);border-bottom:1px solid rgba(255,255,255,0.06);}
-  .cat-ptab{flex:1;padding:12px 0;text-align:center;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.35);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;}
+  .cat-pg{
+    background:#060D17;
+    min-height:100vh;
+    padding-top:87px;
+    display:flex;
+    flex-direction:row;
+  }
+  .cat-panel{
+    width:360px;
+    min-width:360px;
+    flex-shrink:0;
+    background:linear-gradient(180deg,#0d1b2a,#0a1622);
+    border-right:1px solid rgba(255,255,255,0.06);
+    display:flex;
+    flex-direction:column;
+    height:calc(100vh - 87px);
+    position:sticky;
+    top:87px;
+    overflow:hidden;
+  }
+  .cat-ptabs{
+    display:flex;
+    flex-shrink:0;
+    background:rgba(0,0,0,0.25);
+    border-bottom:1px solid rgba(255,255,255,0.08);
+  }
+  .cat-ptab{
+    flex:1;
+    padding:13px 0;
+    text-align:center;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:rgba(255,255,255,0.3);
+    cursor:pointer;
+    border-bottom:2px solid transparent;
+    transition:all .2s;
+  }
   .cat-ptab.on{color:#E89A1C;border-bottom-color:#E89A1C;}
-  .cat-pbody{flex:1;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:16px;}
-  .cat-pbody::-webkit-scrollbar{width:3px;} .cat-pbody::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);}
-  .cat-tp{display:none;flex-direction:column;gap:14px;} .cat-tp.on{display:flex;}
+  .cat-pbody{
+    flex:1;
+    overflow-y:auto;
+    overflow-x:hidden;
+    padding:16px 14px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    min-height:0;
+  }
+  .cat-pbody::-webkit-scrollbar{width:3px;}
+  .cat-pbody::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px;}
+  .cat-tp{display:none;flex-direction:column;gap:14px;}
+  .cat-tp.on{display:flex;}
   .cat-sh{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#E89A1C;opacity:.85;margin-bottom:8px;display:flex;align-items:center;gap:8px;}
   .cat-sh::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(232,154,28,0.3),transparent);}
   .cat-r2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
   .cat-r3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
   .cat-fld{display:flex;flex-direction:column;gap:4px;}
   .cat-fld label{font-size:8px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:rgba(255,255,255,0.38);}
-  .cat-fld input,.cat-fld select,.cat-fld textarea{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:8px 11px;font-family:'Barlow',sans-serif;font-size:12px;font-weight:500;color:#fff;outline:none;transition:border-color .15s;resize:vertical;width:100%;}
+  .cat-fld input,.cat-fld select,.cat-fld textarea{
+    background:rgba(255,255,255,0.05);
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:8px;
+    padding:8px 11px;
+    font-family:'Barlow',sans-serif;
+    font-size:12px;
+    font-weight:500;
+    color:#fff;
+    outline:none;
+    transition:border-color .15s;
+    resize:vertical;
+    width:100%;
+  }
   .cat-fld input:focus,.cat-fld select:focus,.cat-fld textarea:focus{border-color:#E89A1C;background:rgba(232,154,28,0.04);}
   .cat-fld select option{background:#111e2e;}
-  .cat-lz{border:2px dashed rgba(255,255,255,0.1);border-radius:10px;padding:10px 13px;display:flex;align-items:center;gap:12px;cursor:pointer;position:relative;overflow:hidden;transition:all .2s;background:rgba(255,255,255,0.02);}
+  .cat-lz{border:2px dashed rgba(255,255,255,0.1);border-radius:10px;padding:10px 13px;display:flex;align-items:center;gap:12px;cursor:pointer;position:relative;transition:all .2s;background:rgba(255,255,255,0.02);}
   .cat-lz:hover{border-color:#E89A1C;background:rgba(232,154,28,0.06);}
   .cat-lz input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
   .cat-lzprev{width:64px;height:34px;border-radius:6px;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;}
@@ -2083,6 +2142,8 @@ const CATALOGUE_CSS = `
   .cat-isl input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
   .cat-isl .pv{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:7px;z-index:2;}
   .cat-isl .ilbl{font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.22);}
+  .cat-isl-del{position:absolute;top:4px;right:4px;z-index:4;background:rgba(200,0,0,0.85);border:none;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;font-size:11px;line-height:1;opacity:0;transition:opacity .15s;}
+  .cat-isl:hover .cat-isl-del{opacity:1;}
   .cat-cks{display:flex;flex-wrap:wrap;gap:6px;}
   .cat-ck{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:rgba(255,255,255,0.5);background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:5px 11px;cursor:pointer;transition:all .15s;user-select:none;}
   .cat-ck.on{background:rgba(232,154,28,0.14);border-color:rgba(232,154,28,0.4);color:#E89A1C;}
@@ -2092,6 +2153,7 @@ const CATALOGUE_CSS = `
   .cat-preview{flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;align-items:center;padding:24px 16px 60px;gap:16px;}
   .cat-preview::-webkit-scrollbar{width:3px;}
   .cat-outer{width:860px;transform-origin:top center;flex-shrink:0;}
+  .cat-tpl-section{flex-shrink:0;border-top:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.2);max-height:260px;overflow:hidden;display:flex;flex-direction:column;}
   .cat-actions{display:flex;gap:10px;align-items:center;flex-shrink:0;padding:12px 14px;border-top:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.2);}
   .cat-btn{display:inline-flex;align-items:center;gap:7px;border:none;border-radius:9px;padding:0 18px;height:36px;font-family:'Barlow',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .18s;white-space:nowrap;letter-spacing:.5px;}
   .cat-btn-gold{background:linear-gradient(135deg,#E89A1C,#C47A0A);color:#fff;box-shadow:0 4px 16px rgba(232,154,28,0.3);flex:1;justify-content:center;}
@@ -2099,8 +2161,24 @@ const CATALOGUE_CSS = `
   .cat-btn-out{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#fff;}
   .cat-btn-out:hover{background:rgba(255,255,255,0.1);}
   .cat-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:60px 20px;text-align:center;color:rgba(255,255,255,0.15);}
-  .cat-empty p{font-size:13px;line-height:1.7;}
-  @media(max-width:900px){.cat-panel{display:none;} .cat-preview{padding:16px 8px 60px;}}
+  .cat-tpl-row{display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.03);cursor:pointer;transition:all .15s;}
+  .cat-tpl-row:hover{background:rgba(232,154,28,0.08);border-color:rgba(232,154,28,0.25);}
+  .cat-tpl-name{flex:1;font-size:12px;font-weight:600;color:rgba(255,255,255,0.8);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cat-tpl-date{font-size:9px;color:rgba(255,255,255,0.28);flex-shrink:0;}
+  .cat-tpl-del{background:none;border:none;color:rgba(255,255,255,0.2);cursor:pointer;font-size:13px;padding:0 2px;transition:color .15s;}
+  .cat-tpl-del:hover{color:#d36135;}
+  .cat-tpl-empty{font-size:11px;color:rgba(255,255,255,0.2);text-align:center;padding:16px 0;}
+  .cat-save-row{display:flex;gap:7px;align-items:center;}
+  .cat-save-row input{flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:7px 10px;font-size:12px;color:#fff;outline:none;}
+  .cat-save-row input:focus{border-color:#E89A1C;}
+  .cat-save-row input::placeholder{color:rgba(255,255,255,0.2);}
+  .cat-btn-save{background:rgba(232,154,28,0.15);border:1px solid rgba(232,154,28,0.35);color:#E89A1C;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .15s;}
+  .cat-btn-save:hover{background:rgba(232,154,28,0.25);}
+  @media(max-width:900px){
+    .cat-panel{display:none;}
+    .cat-preview{padding:16px 8px 60px;}
+    .cat-pg{padding-top:115px;}
+  }
 `;
 
 /* ── SVG icons ── */
@@ -2117,6 +2195,7 @@ const SWATCH_COLORS = ['#ffffff','#1a1a1a','#888888','#C0C0C0','#1a3a7a','#8B000
 
 const CataloguePage = ({initialCar=null}) => {
   const [tab, setTab] = useState(0);
+
   const carToForm = (car) => {
     if (!car) return {make:'',model:'',year:'',body:'',cond:'',price:'',status:'',phone:'0795505722',fb:'EL Warcha Auto',ig:'el.warcha.auto',desc:'',engine:'',power:'',fuel:'',gear:'',drive:'',km:'',doors:'',seats:'',colorname:''};
     const fob = parseFloat(car.price_fob)||0;
@@ -2167,7 +2246,103 @@ const CataloguePage = ({initialCar=null}) => {
   const [equips, setEquips] = useState(()=>carToEquips(initialCar));
   const [colors, setColors] = useState(()=>carToColors(initialCar));
   const [generated, setGenerated] = useState(!!initialCar);
-  const [exporting, setExporting] = useState(false);
+  const [exporting,      setExporting]      = useState(false);
+  const [templates,      setTemplates]      = useState([]);
+  const [saveName,       setSaveName]       = useState('');
+  const [showTemplates,  setShowTemplates]  = useState(false);
+  const [savingTpl,      setSavingTpl]      = useState(false);
+  const [currentTplId,   setCurrentTplId]   = useState(null);
+
+  // Auto-update saveName when make/model changes
+  React.useEffect(() => {
+    const name = (form.make + ' ' + form.model).trim();
+    if (name) setSaveName(name);
+  }, [form.make, form.model]);
+
+  React.useEffect(() => {
+    getCatalogueTemplates()
+      .then(setTemplates)
+      .catch(e => console.error('Failed to load templates', e));
+  }, []);
+
+  const saveTemplate = async () => {
+    const name = saveName.trim() || (form.make + ' ' + form.model).trim() || 'Sans nom';
+    setSavingTpl(true);
+    try {
+      const tplId = currentTplId || crypto.randomUUID();
+      const uploadedImgs = { ...imgs };
+      for (const [slot, val] of Object.entries(imgs)) {
+        if (val && val.startsWith('data:')) {
+          try {
+            const res  = await fetch(val);
+            const blob = await res.blob();
+            const file = new File([blob], `${slot}.jpg`, { type: blob.type });
+            uploadedImgs[slot] = await uploadCatalogueAsset(tplId, slot, file);
+          } catch(_) {}
+        }
+      }
+      let savedLogo = logoB64;
+      if (logoB64 && logoB64.startsWith('data:')) {
+        try {
+          const res  = await fetch(logoB64);
+          const blob = await res.blob();
+          const file = new File([blob], 'logo.png', { type: blob.type });
+          savedLogo  = await uploadCatalogueAsset(tplId, 'logo', file);
+        } catch(_) {}
+      }
+      const payload = {
+        id:           currentTplId || undefined,
+        name,
+        form_data:    form,
+        equips:       [...equips],
+        colors:       [...colors],
+        logo_url:     savedLogo,
+        photo_front:  uploadedImgs.front       || null,
+        photo_rear:   uploadedImgs.rear        || null,
+        photo_side_r: uploadedImgs['side-r']   || null,
+        photo_side_l: uploadedImgs['side-l']   || null,
+        photo_int1:   uploadedImgs.int1        || null,
+        photo_int2:   uploadedImgs.int2        || null,
+      };
+      const saved = await saveCatalogueTemplate(payload);
+      setCurrentTplId(saved.id);
+      setTemplates(prev => {
+        const idx = prev.findIndex(t => t.id === saved.id);
+        return idx >= 0 ? prev.map(t => t.id === saved.id ? saved : t) : [saved, ...prev];
+      });
+      setSaveName('');
+      setShowTemplates(true);
+    } catch(e) { console.error('Save failed', e); }
+    finally { setSavingTpl(false); }
+  };
+
+  const loadTemplate = (tpl) => {
+    setForm(tpl.form_data || {});
+    setEquips(new Set(tpl.equips || []));
+    setColors(new Set(tpl.colors?.length ? tpl.colors : ['#ffffff']));
+    setLogoB64(tpl.logo_url || null);
+    setImgs({
+      ...(tpl.photo_front  ? { front:    tpl.photo_front  } : {}),
+      ...(tpl.photo_rear   ? { rear:     tpl.photo_rear   } : {}),
+      ...(tpl.photo_side_r ? {'side-r':  tpl.photo_side_r } : {}),
+      ...(tpl.photo_side_l ? {'side-l':  tpl.photo_side_l } : {}),
+      ...(tpl.photo_int1   ? { int1:     tpl.photo_int1   } : {}),
+      ...(tpl.photo_int2   ? { int2:     tpl.photo_int2   } : {}),
+    });
+    setSaveName(tpl.name);
+    setCurrentTplId(tpl.id);
+    setGenerated(true);
+    setShowTemplates(false);
+  };
+
+  const deleteTemplate = async (id, e) => {
+    e.stopPropagation();
+    try {
+      await deleteCatalogueTemplate(id);
+      setTemplates(prev => prev.filter(t => t.id !== id));
+      if (currentTplId === id) setCurrentTplId(null);
+    } catch(e) { console.error('Delete failed', e); }
+  };;
   const catRef = React.useRef(null);
   const outerRef = React.useRef(null);
   const previewRef = React.useRef(null);
@@ -2342,17 +2517,28 @@ const CataloguePage = ({initialCar=null}) => {
             {tab===0&&<div className="cat-tp on">
               <div>
                 <div className="cat-sh">Logo</div>
-                <div className="cat-lz">
-                  <input type="file" accept="image/*" onChange={handleLogo}/>
-                  <div className="cat-lzprev">
-                    {logoB64
-                      ? <img src={logoB64} style={{width:'100%',height:'100%',objectFit:'contain'}}/>
-                      : <span style={{fontSize:11,color:'rgba(255,255,255,0.2)'}}>Logo</span>}
+                <div style={{position:'relative'}}>
+                  <div className="cat-lz">
+                    <input type="file" accept="image/*" onChange={handleLogo}/>
+                    <div className="cat-lzprev">
+                      {logoB64
+                        ? <img src={logoB64} style={{width:'100%',height:'100%',objectFit:'contain'}}/>
+                        : <span style={{fontSize:11,color:'rgba(255,255,255,0.2)'}}>Logo</span>}
+                    </div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12,fontWeight:700,color:'#fff',marginBottom:2}}>
+                        {logoB64 ? 'Logo chargé — cliquer pour changer' : 'Uploader votre logo'}
+                      </div>
+                      <div style={{fontSize:10,color:'rgba(255,255,255,0.35)'}}>PNG transparent recommandé</div>
+                    </div>
                   </div>
-                  <div>
-                    <div style={{fontSize:12,fontWeight:700,color:'#fff',marginBottom:2}}>Uploader votre logo</div>
-                    <div style={{fontSize:10,color:'rgba(255,255,255,0.35)'}}>PNG transparent recommandé</div>
-                  </div>
+                  {logoB64&&(
+                    <button
+                      onClick={e=>{e.stopPropagation();setLogoB64(null);}}
+                      style={{position:'absolute',top:-6,right:-6,background:'#dc2626',border:'none',borderRadius:'50%',width:20,height:20,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'#fff',fontSize:11,zIndex:10,flexShrink:0}}
+                      title="Supprimer le logo"
+                    >✕</button>
+                  )}
                 </div>
               </div>
               <div>
@@ -2484,7 +2670,12 @@ const CataloguePage = ({initialCar=null}) => {
                       {imgs[key]
                         ? <>
                             <img className="pv" src={imgs[key]} alt={lbl}/>
-                            <div style={{position:'absolute',bottom:0,left:0,right:0,background:'rgba(0,0,0,0.55)',fontSize:7,fontWeight:700,letterSpacing:1,textTransform:'uppercase',color:'rgba(255,255,255,0.7)',padding:'3px 5px',textAlign:'center',zIndex:3}}>Remplacer</div>
+                            <div style={{position:'absolute',bottom:0,left:0,right:0,background:'rgba(0,0,0,0.55)',fontSize:7,fontWeight:700,letterSpacing:1,textTransform:'uppercase',color:'rgba(255,255,255,0.7)',padding:'3px 5px',textAlign:'center',zIndex:3}}>Cliquer pour remplacer</div>
+                            <button
+                              className="cat-isl-del"
+                              onClick={e=>{e.stopPropagation();e.preventDefault();setImgs(prev=>{const n={...prev};delete n[key];return n;});}}
+                              title="Supprimer"
+                            >✕</button>
                           </>
                         : <>
                             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" style={{opacity:.2}}><rect x="3" y="5" width="18" height="14" rx="2" stroke="white" strokeWidth="1.5"/><circle cx="12" cy="12" r="4" stroke="white" strokeWidth="1.5"/></svg>
@@ -2500,6 +2691,51 @@ const CataloguePage = ({initialCar=null}) => {
           </div>
 
           {/* Action buttons */}
+          {/* ── TEMPLATE MANAGER ── */}
+          <div className="cat-tpl-section">
+            {/* Save row */}
+            <div style={{padding:'10px 14px 8px'}}>
+              <div style={{fontSize:9,fontWeight:700,letterSpacing:2,textTransform:'uppercase',color:'rgba(255,255,255,0.25)',marginBottom:6}}>{currentTplId?'Mettre à jour le modèle':'Sauvegarder le modèle'}</div>
+              <div className="cat-save-row">
+                <input
+                  value={saveName}
+                  onChange={e=>setSaveName(e.target.value)}
+                  placeholder="Nom du modèle..."
+                  onKeyDown={e=>e.key==='Enter'&&saveTemplate()}
+                />
+                <button className="cat-btn-save" onClick={saveTemplate} disabled={savingTpl}>{savingTpl?'⏳':'💾'} Sauv.</button>
+              </div>
+            </div>
+            {/* Toggle templates list */}
+            <div
+              onClick={()=>setShowTemplates(v=>!v)}
+              style={{padding:'7px 14px',display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',borderTop:'1px solid rgba(255,255,255,0.05)'}}
+            >
+              <span style={{fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:'uppercase',color:templates.length>0?'rgba(232,154,28,0.8)':'rgba(255,255,255,0.2)'}}>
+                📂 Modèles sauvegardés ({templates.length})
+              </span>
+              <span style={{fontSize:10,color:'rgba(255,255,255,0.25)'}}>{showTemplates?'▲':'▼'}</span>
+            </div>
+            {showTemplates&&(
+              <div style={{maxHeight:150,overflowY:'auto',padding:'0 10px 10px',display:'flex',flexDirection:'column',gap:5}}>
+                {templates.length===0
+                  ? <div className="cat-tpl-empty">Aucun modèle sauvegardé</div>
+                  : templates.map(tpl=>(
+                    <div key={tpl.key} className="cat-tpl-row" onClick={()=>loadTemplate(tpl)}>
+                      <div style={{flexShrink:0,width:28,height:28,borderRadius:6,background:'rgba(232,154,28,0.12)',border:'1px solid rgba(232,154,28,0.2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13}}>🎨</div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div className="cat-tpl-name">{tpl.name}</div>
+                        <div className="cat-tpl-date">{new Date(tpl.savedAt).toLocaleDateString('fr-DZ')}</div>
+                      </div>
+                      <button className="cat-tpl-del" onClick={e=>deleteTemplate(tpl.id,e)} title="Supprimer">✕</button>
+                    </div>
+                  ))
+                }
+              </div>
+            )}
+          </div>
+
+          {/* ── MAIN ACTIONS ── */}
           <div className="cat-actions">
             <button className="cat-btn cat-btn-gold" onClick={()=>setGenerated(true)}>
               ✦ Générer le catalogue
