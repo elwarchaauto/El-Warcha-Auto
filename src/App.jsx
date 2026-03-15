@@ -2168,6 +2168,7 @@ const CataloguePage = ({initialCar=null}) => {
     const r = new FileReader();
     r.onload = ev => setLogoB64(ev.target.result);
     r.readAsDataURL(file);
+    e.target.value = ''; // reset so same file can be re-selected
   };
 
   const handleImg = (key, e) => {
@@ -2175,6 +2176,7 @@ const CataloguePage = ({initialCar=null}) => {
     const r = new FileReader();
     r.onload = ev => setImgs(prev => ({...prev, [key]: ev.target.result}));
     r.readAsDataURL(file);
+    e.target.value = ''; // reset so same file can be re-selected
   };
 
   const toggleEquip = eq => setEquips(prev => {
