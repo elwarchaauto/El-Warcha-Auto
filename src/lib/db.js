@@ -99,7 +99,16 @@ export const getCars = async (filters = {}) => {
 
   const { data, error } = await query;
   if (error) throw error;
-  return data;
+
+  // Normalize car_equipment: Supabase may return it as object or array depending on FK naming
+  return (data || []).map(car => ({
+    ...car,
+    car_equipment: car.car_equipment
+      ? Array.isArray(car.car_equipment)
+        ? car.car_equipment
+        : [car.car_equipment]
+      : [],
+  }));
 };
 
 export const getCarById = async (id) => {
@@ -113,7 +122,15 @@ export const getCarById = async (id) => {
     .eq('id', id)
     .single();
   if (error) throw error;
-  return data;
+
+  return {
+    ...data,
+    car_equipment: data.car_equipment
+      ? Array.isArray(data.car_equipment)
+        ? data.car_equipment
+        : [data.car_equipment]
+      : [],
+  };
 };
 
 export const createCar = async (car, equipment) => {
@@ -199,5 +216,63 @@ export const uploadDealerLogo = async (dealerId, file) => {
     .from('dealer-logos')
     .getPublicUrl(fileName);
 
+  return data.publicUrl;
+};
+
+// ============================================================
+// CATALOGUE TEMPLATES
+// ============================================================
+
+export const getCatalogueTemplates = async () => {
+  const { data, error } = await supabase
+    .from('catalogue_templates')
+    .select('*')
+    .order('updated_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+};
+
+export const saveCatalogueTemplate = async (template) => {
+  if (template.id) {
+    // Update existing
+    const { data, error } = await supabase
+      .from('catalogue_templates')
+      .update({ ...template, updated_at: new Date().toISOString() })
+      .eq('id', template.id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  } else {
+    // Insert new
+    const { id: _id, ...rest } = template;
+    const { data, error } = await supabase
+      .from('catalogue_templates')
+      .insert([rest])
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+};
+
+export const deleteCatalogueTemplate = async (id) => {
+  const { error } = await supabase
+    .from('catalogue_templates')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+};
+
+export const uploadCatalogueAsset = async (templateId, slotKey, file) => {
+  const ext  = file.name.split('.').pop();
+  const path = `${templateId}/${slotKey}.${ext}`;
+  const { error } = await supabase.storage
+    .from('catalogue-assets')
+    .upload(path, file, { upsert: true });
+  if (error) throw error;
+  const { data } = supabase.storage
+    .from('catalogue-assets')
+    .getPublicUrl(path);
   return data.publicUrl;
 };
