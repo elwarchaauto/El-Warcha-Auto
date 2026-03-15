@@ -2227,6 +2227,7 @@ const CataloguePage = ({initialCar=null}) => {
     if (!catRef.current) return;
     setExporting(true);
     try {
+      // Load libs if needed
       if (!window.html2canvas) {
         await new Promise((res, rej) => {
           const s = document.createElement('script');
@@ -2243,26 +2244,64 @@ const CataloguePage = ({initialCar=null}) => {
           document.head.appendChild(s);
         });
       }
-      const prev = outerRef.current.style.transform;
-      outerRef.current.style.transform = 'scale(1)';
-      outerRef.current.style.height = 'auto';
-      await new Promise(r => setTimeout(r, 300));
-      const canvas = await window.html2canvas(catRef.current, {
-        scale: 3, useCORS: true, allowTaint: true,
-        backgroundColor: '#0A1520', logging: false,
-        windowWidth: 860, windowHeight: catRef.current.scrollHeight,
+
+      // Clone the catalogue node into a fresh container directly on body
+      // This removes ALL transform/overflow/clipping from parent containers
+      const clone = catRef.current.cloneNode(true);
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = [
+        'position:fixed',
+        'top:0', 'left:0',
+        'width:860px',
+        'z-index:-9999',
+        'pointer-events:none',
+        'visibility:hidden',  // invisible but still rendered at full size
+        'background:#0A1520',
+      ].join(';');
+      wrapper.appendChild(clone);
+      document.body.appendChild(wrapper);
+
+      // Wait for layout to fully settle
+      await new Promise(r => setTimeout(r, 400));
+
+      const naturalH = clone.scrollHeight;
+
+      const canvas = await window.html2canvas(clone, {
+        scale: 3,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#0A1520',
+        logging: false,
+        width: 860,
+        height: naturalH,
+        windowWidth: 860,
+        windowHeight: naturalH,
+        x: 0,
+        y: 0,
       });
-      outerRef.current.style.transform = prev;
-      outerRef.current.style.height = '';
+
+      // Remove clone
+      document.body.removeChild(wrapper);
+
       const { jsPDF } = window.jspdf;
       const imgData = canvas.toDataURL('image/png');
+      // Use exact pixel ratio for PDF page size — no squishing
+      const pxW = canvas.width;
+      const pxH = canvas.height;
       const mmW = 210;
-      const mmH = parseFloat(((canvas.height / canvas.width) * mmW).toFixed(2));
-      const pdf = new jsPDF({ orientation: mmH > mmW ? 'portrait' : 'landscape', unit: 'mm', format: [mmW, mmH], compress: true });
+      const mmH = parseFloat(((pxH / pxW) * mmW).toFixed(2));
+      const pdf = new jsPDF({
+        orientation: mmH > mmW ? 'portrait' : 'landscape',
+        unit: 'mm',
+        format: [mmW, mmH],
+        compress: true,
+      });
       pdf.addImage(imgData, 'PNG', 0, 0, mmW, mmH, undefined, 'FAST');
-      const name = `elwarcha_${(form.make||'catalogue').toLowerCase()}_${(form.model||'').toLowerCase()}_${form.year}`.replace(/\s+/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'') + '.pdf';
+      const name = `elwarcha_${(form.make||'catalogue').toLowerCase()}_${(form.model||'').toLowerCase()}_${form.year}`
+        .replace(/\s+/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'') + '.pdf';
       pdf.save(name);
-    } catch(e) { console.error(e); }
+
+    } catch(e) { console.error('PDF export error:', e); }
     finally { setExporting(false); }
   };
 
