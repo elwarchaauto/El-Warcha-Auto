@@ -92,7 +92,8 @@ const calcDZD = (cny, s, usd=null, currency='CNY') => {
     return null;
   }
   if (!priceUSD) return null;
-  return Math.round((priceUSD + (parseFloat(s.shipment_fee_usd)||0)) * parseFloat(s.usd_dzd_rate));
+  const margin = parseFloat(s.margin_dzd)||0;
+  return Math.round((priceUSD + (parseFloat(s.shipment_fee_usd)||0)) * parseFloat(s.usd_dzd_rate) + margin);
 };
 
 // Get the display price in USD for a car
@@ -468,12 +469,7 @@ const SearchPanel = ({filters, setFilters, cars=[]}) => {
 };
 
 const CarCard = ({car, settings, onClick, onCatalogue}) => {
-  const _carFob = parseFloat(car.price_fob)||0;
-  const _carShip = parseFloat(settings?.shipment_fee_usd)||0;
-  const _carTotal = _carFob > 0 ? _carFob + _carShip : (parseFloat(car.price_usd)||0);
-  const dzd    = _carTotal > 0 && settings?.usd_dzd_rate
-    ? Math.round(_carTotal * parseFloat(settings.usd_dzd_rate))
-    : calcDZD(car.price_cny, settings, car.price_usd, car.price_currency);
+  const dzd = calcDZD(car.price_cny, settings, car.price_fob||car.price_usd, 'USD');
   const photos = car.photos||[];
   const eq     = car.car_equipment?.[0]||{};
   const eqList = Object.entries(EQUIPMENT_LABELS).filter(([k])=>eq[k]).map(([,v])=>v);
@@ -679,7 +675,7 @@ const CarForm = ({initial, initialEq, dealers, settings, onSubmit, onCancel, sub
   const shipFee   = parseFloat(settings?.shipment_fee_usd) || 0;
   const totalUSD  = fobVal > 0 ? fobVal + shipFee : 0;
   const previewDZD = totalUSD > 0 && settings?.usd_dzd_rate
-    ? Math.round(totalUSD * parseFloat(settings.usd_dzd_rate))
+    ? Math.round(totalUSD * parseFloat(settings.usd_dzd_rate) + (parseFloat(settings?.margin_dzd)||0))
     : 0;
 
   const addPhoto = (file, dataUrl) => setPhotos(p=>[...p,{src:dataUrl, file}]);
@@ -821,12 +817,7 @@ const CarDetailPage = ({car, settings, setPage, onDelete, onUpdate, showToast, d
   const [editing, setEditing] = useState(false);
   if (editing) return <EditCarPage car={car} settings={settings} setPage={setPage} dealers={dealers} onUpdate={u=>{onUpdate(u);setEditing(false);}} showToast={showToast} onCancel={()=>setEditing(false)}/>;
   const dealer=car.dealers; const eq=car.car_equipment?.[0]||{}; const photos=car.photos||[];
-  const _detFob   = parseFloat(car.price_fob)||0;
-  const _detShip  = parseFloat(settings?.shipment_fee_usd)||0;
-  const _detTotal = _detFob > 0 ? _detFob + _detShip : (parseFloat(car.price_usd)||0);
-  const dzd = _detTotal > 0 && settings?.usd_dzd_rate
-    ? Math.round(_detTotal * parseFloat(settings.usd_dzd_rate))
-    : calcDZD(car.price_cny, settings, car.price_usd, car.price_currency);
+  const dzd = calcDZD(car.price_cny, settings, car.price_fob||car.price_usd, 'USD');
   const specs=[{l:"Marque",v:car.brand},{l:"Modèle",v:car.model},{l:"Année",v:car.year},{l:"Version",v:car.trim},{l:"Carrosserie",v:car.body_type},{l:"Couleur",v:car.color},{l:"Origine",v:car.origin==="imported"?"Importé":"Local"},{l:"Kilométrage",v:car.mileage?fmt(car.mileage)+" km":null},{l:"Carburant",v:car.fuel_type},{l:"Transmission",v:car.transmission},{l:"Cylindrée",v:car.engine_size},{l:"Portes",v:car.doors}].filter(s=>s.v);
   return (
     <div style={{background:"#f2f2f2",minHeight:"100vh",paddingBottom:60}}>
@@ -1135,9 +1126,10 @@ const EditDealerPage = ({dealer, setPage, onUpdate, showToast}) => {
 };
 const SettingsPage = ({settings, setSettings, showToast}) => {
   const [form, setForm] = useState({
-    cny_usd_rate:   settings?.cny_usd_rate   || '',
-    usd_dzd_rate:   settings?.usd_dzd_rate   || '',
+    cny_usd_rate:     settings?.cny_usd_rate     || '',
+    usd_dzd_rate:     settings?.usd_dzd_rate     || '',
     shipment_fee_usd: settings?.shipment_fee_usd || '',
+    margin_dzd:       settings?.margin_dzd       || '',
   });
   const [saving, setSaving] = useState(false);
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}));
@@ -1149,6 +1141,7 @@ const SettingsPage = ({settings, setSettings, showToast}) => {
         cny_usd_rate:     parseFloat(form.cny_usd_rate)     || 0,
         usd_dzd_rate:     parseFloat(form.usd_dzd_rate)     || 0,
         shipment_fee_usd: parseFloat(form.shipment_fee_usd) || 0,
+        margin_dzd:       parseFloat(form.margin_dzd)       || 0,
         rates_updated_at: new Date().toISOString(),
       });
       setSettings(u);
@@ -1157,11 +1150,12 @@ const SettingsPage = ({settings, setSettings, showToast}) => {
     finally { setSaving(false); }
   };
 
+  const margin = parseFloat(form.margin_dzd)||0;
   const previewCNY = form.cny_usd_rate && form.usd_dzd_rate
-    ? Math.round((100000 * parseFloat(form.cny_usd_rate) + parseFloat(form.shipment_fee_usd||0)) * parseFloat(form.usd_dzd_rate))
+    ? Math.round((100000 * parseFloat(form.cny_usd_rate) + parseFloat(form.shipment_fee_usd||0)) * parseFloat(form.usd_dzd_rate) + margin)
     : null;
   const previewUSD = form.usd_dzd_rate
-    ? Math.round((20000 + parseFloat(form.shipment_fee_usd||0)) * parseFloat(form.usd_dzd_rate))
+    ? Math.round((20000 + parseFloat(form.shipment_fee_usd||0)) * parseFloat(form.usd_dzd_rate) + margin)
     : null;
 
   return (
@@ -1185,6 +1179,17 @@ const SettingsPage = ({settings, setSettings, showToast}) => {
             <input className="f" type="number" value={form.shipment_fee_usd} onChange={set("shipment_fee_usd")} placeholder="ex: 1200"/>
           </FF>
         </Sec>
+        <Sec title="Marge bénéficiaire (DZD)">
+          <p style={{fontSize:12,color:"#9a9a9a"}}>Montant fixe en DZD ajouté au prix final de <b>chaque véhicule</b> après conversion.</p>
+          <FF label="Marge (DZD)">
+            <input className="f" type="number" value={form.margin_dzd} onChange={set("margin_dzd")} placeholder="ex: 150000"/>
+          </FF>
+          {form.margin_dzd&&parseFloat(form.margin_dzd)>0&&(
+            <div style={{marginTop:6,fontSize:12,color:"#9a9a9a",background:"#f8f8f8",borderRadius:6,padding:"7px 10px",border:"1px solid #e5e5e5"}}>
+              + {fmt(parseFloat(form.margin_dzd))} DZD ajoutés à chaque prix affiché
+            </div>
+          )}
+        </Sec>
         {(previewCNY||previewUSD)&&(
           <Sec title="Aperçu des formules">
             <div className="settings-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
@@ -1193,7 +1198,7 @@ const SettingsPage = ({settings, setSettings, showToast}) => {
                   <div style={{fontSize:10,color:"#9a9a9a",fontWeight:700,marginBottom:4}}>¥100 000 CNY →</div>
                   <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:18,color:"#d36135"}}>{fmt(previewCNY)} DZD</div>
                   <code style={{fontSize:9,color:"#9a9a9a",display:"block",marginTop:4}}>
-                    (100K × {parseFloat(form.cny_usd_rate)||0} + {parseFloat(form.shipment_fee_usd)||0}$) × {parseFloat(form.usd_dzd_rate)||0}
+                    (100K × {parseFloat(form.cny_usd_rate)||0} + {parseFloat(form.shipment_fee_usd)||0}$) × {parseFloat(form.usd_dzd_rate)||0}{margin>0?` + ${fmt(margin)} DZD`:''}
                   </code>
                 </div>
               )}
@@ -1202,7 +1207,7 @@ const SettingsPage = ({settings, setSettings, showToast}) => {
                   <div style={{fontSize:10,color:"#9a9a9a",fontWeight:700,marginBottom:4}}>$20 000 USD →</div>
                   <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:18,color:"#d36135"}}>{fmt(previewUSD)} DZD</div>
                   <code style={{fontSize:9,color:"#9a9a9a",display:"block",marginTop:4}}>
-                    (20K + {parseFloat(form.shipment_fee_usd)||0}$) × {parseFloat(form.usd_dzd_rate)||0}
+                    (20K + {parseFloat(form.shipment_fee_usd)||0}$) × {parseFloat(form.usd_dzd_rate)||0}{margin>0?` + ${fmt(margin)} DZD`:''}
                   </code>
                 </div>
               )}
@@ -1247,7 +1252,7 @@ const GROUP_OPTIONS = [
   {k:"year",l:"Année"},
 ];
 const SORT_OPTIONS = [
-  {k:"price_fob",l:"Prix FOB"},{k:"total_usd",l:"Total USD"},
+  {k:"price_fob",l:"Prix FOB"},{k:"total_usd",l:"Total USD"},{k:"total_dzd",l:"Total DZD"},
   {k:"year",l:"Année"},{k:"mileage",l:"Kilométrage"},
   {k:"brand",l:"Marque"},{k:"model",l:"Modèle"},
   {k:"dealers.name",l:"Concessionnaire"},
@@ -1267,11 +1272,7 @@ const getFieldVal = (car, key, settings=null) => {
     return total>0 ? "$ "+fmtPDF(total) : "—";
   }
   if (key === "total_dzd") {
-    const fob   = parseFloat(car.price_fob)||0;
-    const ship  = parseFloat(settings?.shipment_fee_usd)||0;
-    const total = fob > 0 ? fob + ship : 0;
-    const rate  = parseFloat(settings?.usd_dzd_rate)||0;
-    const dzd   = total > 0 && rate > 0 ? Math.round(total * rate) : null;
+    const dzd = calcDZD(null, settings, parseFloat(car.price_fob)||parseFloat(car.price_usd)||0, 'USD');
     return dzd ? fmtPDF(dzd)+" DZD" : "—";
   }
   // Real car fields
@@ -1375,6 +1376,16 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
   // Sort helper
   const getSortVal = (car, key) => {
     if (key === "dealers.name") return car.dealers?.name?.toLowerCase() || "";
+    // Computed numeric keys
+    if (key === "total_usd") {
+      const fob  = parseFloat(car.price_fob)||0;
+      const ship = parseFloat(settings?.shipment_fee_usd)||0;
+      return fob > 0 ? fob + ship : 0;
+    }
+    if (key === "total_dzd") {
+      return calcDZD(car.price_cny, settings, car.price_fob||car.price_usd, 'USD') || 0;
+    }
+    if (key === "price_fob") return parseFloat(car.price_fob)||0;
     const v = car[key];
     return typeof v === "string" ? v.toLowerCase() : (v ?? 0);
   };
