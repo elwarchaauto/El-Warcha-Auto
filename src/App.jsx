@@ -2237,19 +2237,29 @@ const CI = {
 const EQUIPS = Object.entries(EQUIPMENT_LABELS).map(([k,v]) => ({key:k, label:v}));
 const SWATCH_COLORS = ['#ffffff','#1a1a1a','#888888','#C0C0C0','#1a3a7a','#8B0000','#2d6a1a','#8B4513'];
 
-const CataloguePage = ({initialCar=null}) => {
+const CataloguePage = ({initialCar=null, settings=null}) => {
   const [tab, setTab] = useState(0);
+
+  const fmtNum = n => n ? String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,' ') : '';
 
   const carToForm = (car) => {
     if (!car) return {make:'',model:'',year:'',body:'',cond:'',price:'',status:'',phone:'0795505722',fb:'EL Warcha Auto',ig:'el.warcha.auto',desc:'',engine:'',power:'',fuel:'',gear:'',drive:'',km:'',doors:'',seats:'',colorname:''};
     const fob = parseFloat(car.price_fob)||0;
+    const dzd = calcDZD(car.price_cny, settings, fob||car.price_usd, 'USD');
+    // Show DZD if available, otherwise FOB in USD
+    let priceStr = '';
+    if (dzd && dzd > 0) {
+      priceStr = fmtNum(dzd) + ' DA';
+    } else if (fob > 0) {
+      priceStr = '$ ' + fmtNum(fob) + ' FOB';
+    }
     return {
       make:  car.brand||'',
       model: car.model||'',
       year:  car.year ? String(car.year) : '',
       body:  car.body_type||'',
       cond:  car.condition==='new'?'Neuf':car.condition==='used'?'Occasion':'',
-      price: fob>0 ? '$ '+String(Math.round(fob)).replace(/\B(?=(\d{3})+(?!\d))/g,' ')+' FOB' : '',
+      price: priceStr,
       status: car.status==='available'?'En stock':car.status==='reserved'?'Sur commande':car.status==='sold'?'Vendu':'',
       phone: '0795505722', fb:'EL Warcha Auto', ig:'el.warcha.auto',
       desc:  car.description||'',
@@ -3124,7 +3134,7 @@ export default function App() {
       case "export":
         return <ExportPage {...p} cars={cars} dealers={dealers}/>;
       case "catalogue":
-        return <CataloguePage initialCar={catalogueCar}/>;
+        return <CataloguePage initialCar={catalogueCar} settings={settings}/>;
       case "sql-gen":
         return <SQLGeneratorPage showToast={showToast}/>;
       case "settings":
