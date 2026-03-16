@@ -558,6 +558,7 @@ const CarCard = ({car, settings, onClick, onCatalogue}) => {
 
 const HomePage = ({cars, settings, loading, setPage, setSelectedCar, setCatalogueCar, search, setSearch}) => {
   const [filters, setFilters] = useState({...EMPTY_FILTERS});
+  const [sortHome, setSortHome] = useState("default"); // default | dzd_asc | dzd_desc | fob_asc | fob_desc
   const filtered = cars.filter(c => {
     const q = search.toLowerCase();
     if (q && !((c.brand+" "+c.model+" "+c.year+" "+(c.trim||"")+" "+(c.dealers?.name||"")).toLowerCase().includes(q))) return false;
@@ -577,6 +578,19 @@ const HomePage = ({cars, settings, loading, setPage, setSelectedCar, setCatalogu
     if (filters.equipment) for (const [k,v] of Object.entries(filters.equipment)) if (v && !c.car_equipment?.[0]?.[k]) return false;
     return true;
   });
+  const sortedFiltered = React.useMemo(() => {
+    if (sortHome === "default") return filtered;
+    return [...filtered].sort((a, b) => {
+      const getDZD = c => calcDZD(c.price_cny, settings, c.price_fob||c.price_usd, 'USD') || 0;
+      const getFOB = c => parseFloat(c.price_fob) || 0;
+      if (sortHome === "dzd_asc")  return getDZD(a) - getDZD(b);
+      if (sortHome === "dzd_desc") return getDZD(b) - getDZD(a);
+      if (sortHome === "fob_asc")  return getFOB(a) - getFOB(b);
+      if (sortHome === "fob_desc") return getFOB(b) - getFOB(a);
+      return 0;
+    });
+  }, [filtered, sortHome, settings]);
+
   const stats=[{n:cars.length,l:"Véhicules"},{n:cars.filter(c=>c.status==="available").length,l:"Disponibles"},{n:[...new Set(cars.map(c=>c.dealer_id))].length,l:"Concession."},{n:[...new Set(cars.map(c=>c.brand).filter(Boolean))].length,l:"Marques"}];
   const hasActive = search||Object.entries(filters).some(([k,v])=>k!=="mileageMax"&&k!=="priceMax"&&k!=="priceMaxUSD"&&v&&(typeof v!=="object"||Object.values(v).some(Boolean)));
   return (
@@ -603,11 +617,28 @@ const HomePage = ({cars, settings, loading, setPage, setSelectedCar, setCatalogu
           <span style={{fontFamily:"'Barlow Condensed'",fontWeight:800,fontSize:16}}>{filtered.length} véhicule{filtered.length!==1?"s":""}</span>
           {hasActive&&<span onClick={()=>{setSearch("");setFilters({...EMPTY_FILTERS});}} style={{fontSize:11,color:"#d36135",fontWeight:700,cursor:"pointer",border:"1px solid #fecaca",background:"#fff0f0",padding:"2px 8px",borderRadius:10}}>✕ Effacer tout</span>}
         </div>
+        <div style={{display:"flex",alignItems:"center",gap:7}}>
+          <span style={{fontSize:11,color:"#9a9a9a",fontWeight:600}}>Trier :</span>
+          <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+            {[
+              {v:"default", l:"Par défaut"},
+              {v:"fob_asc", l:"FOB ↑"},
+              {v:"fob_desc",l:"FOB ↓"},
+              {v:"dzd_asc", l:"DZD ↑"},
+              {v:"dzd_desc",l:"DZD ↓"},
+            ].map(o=>(
+              <button key={o.v} onClick={()=>setSortHome(o.v)}
+                style={{fontSize:11,padding:"3px 10px",borderRadius:20,border:"1px solid",borderColor:sortHome===o.v?"#d36135":"#ddd",background:sortHome===o.v?"#d36135":"#fff",color:sortHome===o.v?"#fff":"#555",fontWeight:700,cursor:"pointer",transition:"all .15s"}}>
+                {o.l}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
-      {loading?<Spinner/>:filtered.length===0?(
+      {loading?<Spinner/>:sortedFiltered.length===0?(
         <div className="card" style={{textAlign:"center",padding:60,color:"#9a9a9a"}}><div style={{fontSize:36,marginBottom:10}}>🔍</div><p style={{fontWeight:700,fontSize:15}}>Aucun véhicule trouvé</p><p style={{fontSize:12,marginTop:4}}>Modifiez vos filtres</p></div>
       ):(
-        <div className="au">{filtered.map(car=><CarCard key={car.id} car={car} settings={settings} onClick={()=>{setSelectedCar(car);setPage("car-detail");}} onCatalogue={car=>{setCatalogueCar(car);setPage("catalogue");}}/>)}</div>
+        <div className="au">{sortedFiltered.map(car=><CarCard key={car.id} car={car} settings={settings} onClick={()=>{setSelectedCar(car);setPage("car-detail");}} onCatalogue={car=>{setCatalogueCar(car);setPage("catalogue");}}/>)}</div>
       )}
     </div>
   );
@@ -975,15 +1006,27 @@ const EditCarPage = ({car, settings, setPage, onUpdate, showToast, onCancel, dea
   );
 };
 
-const DealersPage = ({dealers, cars, loading, setPage, setSelectedDealer, onDeleteDealer, showToast}) => (
+const DealersPage = ({dealers, cars, loading, setPage, setSelectedDealer, onDeleteDealer, showToast}) => {
+  const [dealerSearch, setDealerSearch] = useState("");
+  const filteredDealers = dealerSearch.trim()
+    ? dealers.filter(d => (d.name+' '+(d.email||'')+' '+(d.mobile||'')+' '+(d.notes||'')).toLowerCase().includes(dealerSearch.toLowerCase()))
+    : dealers;
+  return (
   <div className="page-wrap" style={{padding:"86px 20px 40px",maxWidth:1200,margin:"0 auto"}}>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:18,flexWrap:"wrap",gap:10}}>
-      <div><h1 style={{fontSize:26,fontWeight:900}}>Concessionnaires</h1><p style={{color:"#9a9a9a",fontSize:13}}>{dealers.length} partenaire{dealers.length!==1?"s":""}</p></div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:14,flexWrap:"wrap",gap:10}}>
+      <div><h1 style={{fontSize:26,fontWeight:900}}>Concessionnaires</h1><p style={{color:"#9a9a9a",fontSize:13}}>{filteredDealers.length} / {dealers.length} partenaire{dealers.length!==1?"s":""}</p></div>
       <button className="btn-red" onClick={()=>setPage("add-dealer")}>+ Ajouter</button>
     </div>
-    {loading?<Spinner/>:(
+    <div style={{position:"relative",marginBottom:16,maxWidth:420}}>
+      <input className="f" placeholder="🔍  Rechercher un concessionnaire..." value={dealerSearch} onChange={e=>setDealerSearch(e.target.value)}
+        style={{paddingRight:dealerSearch?36:16,fontSize:13,borderRadius:20}}/>
+      {dealerSearch&&<button onClick={()=>setDealerSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:"#9a9a9a",fontSize:13,cursor:"pointer"}}>✕</button>}
+    </div>
+    {loading?<Spinner/>:filteredDealers.length===0?(
+      <div className="card" style={{textAlign:"center",padding:40,color:"#9a9a9a"}}><div style={{fontSize:32,marginBottom:8}}>🔍</div><p style={{fontWeight:700}}>Aucun concessionnaire trouvé</p></div>
+    ):(
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:12}}>
-        {dealers.map(d=>{
+        {filteredDealers.map(d=>{
           const dc=cars.filter(c=>c.dealer_id===d.id);
           const avail=dc.filter(c=>c.status==="available").length;
           return (
@@ -1012,7 +1055,8 @@ const DealersPage = ({dealers, cars, loading, setPage, setSelectedDealer, onDele
       </div>
     )}
   </div>
-);
+  );
+};
 
 const DealerDetailPage = ({dealer, cars, settings, setPage, setSelectedCar, setSelectedDealer, onDeleteDealer}) => {
   const dc=cars.filter(c=>c.dealer_id===dealer.id);
