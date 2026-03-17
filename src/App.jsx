@@ -2494,21 +2494,21 @@ div, section, header, footer, span, td, th, table {
                 {/* ── MODEL NAME + PRICE BAND ── */}
                 <div style={{padding:'0 24px 20px',display:'flex',alignItems:'flex-end',justifyContent:'space-between',gap:20}}>
                   <div>
-                    {form.make && <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:700,letterSpacing:4,color:'#E8B84B',opacity:.85,marginBottom:2,textTransform:'uppercase'}}>{form.make.toUpperCase()}</div>}
+                    {form.make && <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:700,letterSpacing:4,color:'#E8B84B',opacity:.85,marginBottom:2,textTransform:'uppercase'}}>{form.make.toUpperCase()}</div>}
                     <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:72,fontWeight:900,textTransform:'uppercase',color:'#fff',lineHeight:.88,letterSpacing:-2}}>{form.model.toUpperCase()||'MODÈLE'}</div>
                     {(form.body||form.year) && <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,fontWeight:400,color:'rgba(255,255,255,0.32)',letterSpacing:3,marginTop:6,textTransform:'uppercase'}}>{[form.body,form.year?'Modèle '+form.year:''].filter(Boolean).join(' · ')}</div>}
                   </div>
                   {/* PRICE + STATUS stacked */}
                   {form.price && (
                     <div style={{textAlign:'right',flexShrink:0}}>
-                      <div style={{fontSize:9,letterSpacing:2,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',marginBottom:6}}>Prix</div>
+                      {/* <div style={{fontSize:9,letterSpacing:2,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',marginBottom:6}}>Prix</div> */}
                       {/* Price number — large gold hero text */}
                       <div style={{position:'relative',display:'inline-block'}}>
                         {/* glow behind price */}
                         <div style={{position:'absolute',inset:-10,background:'radial-gradient(ellipse,rgba(232,184,75,0.18) 0%,transparent 70%)',pointerEvents:'none'}}/>
                         <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:900,lineHeight:1,letterSpacing:-1,position:'relative',display:'flex',alignItems:'flex-end',gap:6,justifyContent:'flex-end'}}>
                           {/* Strip any trailing unit the stored string already has */}
-                          <span style={{fontSize:64,color:'#E8B84B',textShadow:'0 0 30px rgba(232,184,75,0.5)'}}>{form.price.replace(/\s*(DA|FOB)\s*$/i,'').trim()}</span>
+                          <span style={{fontSize:80,color:'#E8B84B',textShadow:'0 0 30px rgba(232,184,75,0.5)'}}>{form.price.replace(/\s*(DA|FOB)\s*$/i,'').trim()}</span>
                           {/* Show unit: DA for DZD prices, FOB label for USD prices */}
                           <span style={{fontSize:22,color:'rgba(232,184,75,0.7)',marginBottom:6,fontWeight:700,letterSpacing:1}}>
                             {/FOB/i.test(form.price) ? 'USD FOB' : 'DA'}
@@ -2516,14 +2516,14 @@ div, section, header, footer, span, td, th, table {
                         </div>
                       </div>
                       {form.status && (
-                        <div style={{marginTop:10,display:'inline-block',background:'rgba(232,184,75,0.14)',border:'1px solid rgba(232,184,75,0.4)',borderRadius:8,padding:'8px 18px',fontSize:17,fontWeight:800,color:'#E8B84B',letterSpacing:0,textTransform:'none',direction:'rtl',unicodeBidi:'plaintext'}}>{form.status}</div>
+                        <div style={{marginTop:10,display:'inline-block',borderRadius:8,padding:'8px 18px',fontSize:20,fontWeight:800,color:'#E8B84B',letterSpacing:0,textTransform:'none',direction:'rtl',unicodeBidi:'plaintext'}}>{form.status}</div>
                       )}
                     </div>
                   )}
                 </div>
 
                 {/* ── SPECS STRIP ── */}
-                {stripItems.length>0 && (
+                {/* {stripItems.length>0 && (
                   <div style={{background:'rgba(255,255,255,0.04)',borderTop:'1px solid rgba(255,255,255,0.07)',borderBottom:'1px solid rgba(255,255,255,0.07)',display:'flex',alignItems:'stretch',overflow:'hidden'}}>
                     {stripItems.map((s,i)=>(
                       <React.Fragment key={i}>
@@ -2535,7 +2535,7 @@ div, section, header, footer, span, td, th, table {
                       </React.Fragment>
                     ))}
                   </div>
-                )}
+                )} */}
 
                 {/* ── BODY ── */}
                 {(specRows.length>0 || equips.size>0 || colors.size>0 || form.desc) && (
