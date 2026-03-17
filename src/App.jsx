@@ -2065,7 +2065,7 @@ const CataloguePage = ({initialCar=null, settings=null}) => {
   ${styles}
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@600;700;800;900&display=swap"/>
   <style>
-    *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+    *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; color-adjust:exact !important; }
 
     /* Screen preview — center the card */
     html, body {
@@ -2076,6 +2076,12 @@ const CataloguePage = ({initialCar=null, settings=null}) => {
       color-adjust: exact !important;
       font-family: 'Barlow', sans-serif;
     }
+      /* Force all backgrounds to render */
+div, section, header, footer, span, td, th, table {
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+  color-adjust: exact !important;
+}
     body {
       padding: 0;
       margin: 0;
@@ -2090,15 +2096,20 @@ const CataloguePage = ({initialCar=null, settings=null}) => {
       margin: 0;
     }
     @media print {
-      html, body {
-        width: ${W}px !important;
-        height: ${H}px !important;
-        overflow: hidden !important;
-        background: #080d14 !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-        color-adjust: exact !important;
-      }
+  html, body {
+    width: ${W}px !important;
+    height: ${H}px !important;
+    overflow: hidden !important;
+    background: #080d14 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
       .cat-wrap {
         width: ${W}px !important;
         transform-origin: top left;
@@ -2459,7 +2470,7 @@ const CataloguePage = ({initialCar=null, settings=null}) => {
                           transition:'all .15s',
                         }}>
                         <img src={imgs[key]} alt={lbl} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
-                        <div style={{position:'absolute',bottom:0,left:0,right:0,background:'linear-gradient(transparent,rgba(0,0,0,0.72))',fontSize:8,fontWeight:700,letterSpacing:1,textTransform:'uppercase',color:'rgba(255,255,255,0.75)',textAlign:'center',padding:'5px 3px'}}>{lbl}</div>
+                        <div style={{position:'absolute',bottom:0,left:0,right:0,background:'linear-gradient(transparent,rgba(0,0,0,0.72))',fontSize:13,fontWeight:700,letterSpacing:1,textTransform:'uppercase',color:'rgba(255,255,255,0.75)',textAlign:'center',padding:'5px 3px'}}>{lbl}</div>
                       </div>
                     ) : null)}
                   </div>
@@ -2543,9 +2554,9 @@ const CataloguePage = ({initialCar=null, settings=null}) => {
                             <tbody>
                               {specRows.map(([k,v])=>(
                                 <tr key={k} style={{borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
-                                  <td style={{padding:'8px 0',fontSize:14,color:'rgba(255,255,255,0.38)',width:'45%',paddingRight:8}}>{k}</td>
+                                  <td style={{padding:'8px 0',fontSize:18,color:'rgba(255,255,255,0.38)',width:'45%',paddingRight:8}}>{k}</td>
                                   <td style={{padding:'8px 0',fontSize:14,fontWeight:700,color:'rgba(255,255,255,0.9)',textAlign:'right'}}>
-                                    <span style={{background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:5,padding:'2px 10px',fontSize:13}}>{v}</span>
+                                    <span style={{background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:5,padding:'2px 10px',fontSize:17}}>{v}</span>
                                   </td>
                                 </tr>
                               ))}
@@ -2600,7 +2611,7 @@ const CataloguePage = ({initialCar=null, settings=null}) => {
                 <div style={{background:'rgba(0,0,0,0.35)',borderTop:'1px solid rgba(255,255,255,0.06)',padding:'14px 28px',marginTop:20,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
                   <div style={{display:'flex',alignItems:'center',gap:20}}>
                     {form.fb && (
-                      <div style={{display:'flex',alignItems:'center',gap:8,fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.8)'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8,fontSize:17,fontWeight:700,color:'rgba(255,255,255,0.8)'}}>
                         <div style={{width:28,height:28,borderRadius:'50%',background:'#1877F2',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
                           <svg width="13" height="13" fill="white" viewBox="0 0 16 16"><path d="M9.5 3H11V1H9C7.3 1 6 2.3 6 4V5H4V7H6V15H8.5V7H10.5L11 5H8.5V4C8.5 3.4 8.9 3 9.5 3Z"/></svg>
                         </div>
@@ -2608,7 +2619,7 @@ const CataloguePage = ({initialCar=null, settings=null}) => {
                       </div>
                     )}
                     {form.ig && (
-                      <div style={{display:'flex',alignItems:'center',gap:8,fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.8)'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8,fontSize:17,fontWeight:700,color:'rgba(255,255,255,0.8)'}}>
                         <div style={{width:28,height:28,borderRadius:'50%',background:'radial-gradient(circle at 30% 107%,#fdf497,#fd5949 45%,#d6249f 60%,#285AEB)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
                           <svg width="13" height="13" fill="none" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="3.5" stroke="white" strokeWidth="1.4"/><circle cx="8" cy="8" r="3" stroke="white" strokeWidth="1.4"/><circle cx="11.5" cy="4.5" r=".8" fill="white"/></svg>
                         </div>
@@ -2616,7 +2627,7 @@ const CataloguePage = ({initialCar=null, settings=null}) => {
                       </div>
                     )}
                     {form.phone && (
-                      <div style={{display:'flex',alignItems:'center',gap:8,fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.8)'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8,fontSize:17,fontWeight:700,color:'rgba(255,255,255,0.8)'}}>
                         <div style={{width:28,height:28,borderRadius:'50%',background:'#E8B84B',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
                           <svg width="13" height="13" fill="none" viewBox="0 0 16 16"><path d="M3 2C3 2 2 2 2 3C2 4 2 7 5 10C8 13 11 14 12 14C13 14 13 13 13 13L14 11C14 10.5 13.5 10.2 11.5 9.2C11 9 10.8 9.1 10.5 9.4L10 10C10 10 9 9.5 8 8.5C7 7.5 6.5 6.5 6.5 6.5L7.1 5.9C7.4 5.6 7.5 5.4 7.3 4.9L6.3 3C6 2.5 5.5 2.5 5.5 2.5Z" stroke="white" strokeWidth="1.3" fill="none"/></svg>
                         </div>
