@@ -242,7 +242,7 @@ const Navbar = ({page, setPage, search, setSearch}) => {
         <div className="nav-main" style={{padding:"0 16px",height:58,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
           <div style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",flexShrink:0}} onClick={()=>navigate("home")}>
             <img src="/logo.png" alt="El Warcha Auto"
-              style={{height:40,width:"auto",objectFit:"contain",flexShrink:0}}
+              style={{height:100,width:"auto",objectFit:"contain",flexShrink:0}}
               onError={e=>{e.target.style.display="none";e.target.nextSibling.style.display="flex";}}/>
             <div style={{display:"none",width:34,height:34,background:"#d36135",borderRadius:6,alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🔧</div>
             <div>
@@ -2421,7 +2421,7 @@ div, section, header, footer, span, td, th, table {
                 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'18px 28px 16px',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
                   {/* LOGO — uploaded image or text fallback */}
                   {logoB64
-                    ? <img src={logoB64} style={{height:70,maxWidth:240,objectFit:'contain',display:'block'}}/>
+                    ? <img src={logoB64} style={{height:100,maxWidth:300,objectFit:'contain',display:'block'}}/>
                     : <div>
                         <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,fontWeight:900,letterSpacing:'3.5px',color:'#fff',textTransform:'uppercase',lineHeight:1}}>
                           EL WARCHA <span style={{color:'#E8B84B'}}>AUTO</span>
