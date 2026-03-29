@@ -60,6 +60,9 @@ const ALL_BRANDS = [
 ];
 const BRAND_NAMES = ALL_BRANDS.map(b=>b.n);
 
+
+// Read deep-link param immediately on module load (before React renders)
+// Read deep-link search params on module load
 const _dlParams = new URLSearchParams(window.location.search);
 const _deepLink = {
   brand:  _dlParams.get('brand')  || '',
@@ -72,11 +75,12 @@ const _deepLink = {
 const _hasDeepLink = Object.values(_deepLink).some(v => v !== '');
 
 const EMPTY_FILTERS = {brand:"",model:"",fuel:"",transmission:"",condition:"",status:"",color:"",body_type:"",yearMin:"",yearMax:"",mileageMax:300000,priceMax:500000,priceMaxUSD:50000,equipment:{}};
-const EMPTY_CAR     = {dealer_id:"",brand:"",model:"",year:"",trim:"",body_type:"",condition:"used",status:"available",mileage:"",origin:"imported",price_fob:"",negotiable:false,fuel_type:"",transmission:"",engine_size:"",color:"",doors:"",description:""};
+const EMPTY_CAR     = {dealer_id:"",brand:"",model:"",year:"",trim:"",body_type:"",condition:"used",status:"available",mileage:"",origin:"imported",price_fob:"",negotiable:false,fuel_type:"",transmission:"",engine_size:"",color:"",doors:"",description:"",custom_date:new Date().toISOString().slice(0,16)};
 const EMPTY_EQ      = Object.fromEntries(Object.keys(EQUIPMENT_LABELS).map(k=>[k,false]));
 
 const fmt    = n => n!=null ? new Intl.NumberFormat("fr-DZ").format(Math.round(n)) : "—";
 const fmtCNY = n => n ? "¥"+new Intl.NumberFormat("zh-CN").format(n) : "—";
+// Calculate DZD from either CNY or USD source price
 const calcDZD = (cny, s, usd=null, currency='CNY') => {
   if (!s?.usd_dzd_rate) return null;
   let priceUSD;
@@ -92,6 +96,7 @@ const calcDZD = (cny, s, usd=null, currency='CNY') => {
   return Math.round((priceUSD + (parseFloat(s.shipment_fee_usd)||0)) * parseFloat(s.usd_dzd_rate) + margin);
 };
 
+// Get the display price in USD for a car
 const getUSD = (car, s) => {
   if (car.price_currency === 'USD' && car.price_usd) return parseFloat(car.price_usd);
   if (car.price_cny && s?.cny_usd_rate) return parseFloat(car.price_cny) * parseFloat(s.cny_usd_rate);
@@ -231,6 +236,7 @@ const Navbar = ({page, setPage, search, setSearch}) => {
   return (
     <>
       <nav style={{background:"#fff",borderBottom:"3px solid #d36135",position:"fixed",top:0,left:0,right:0,zIndex:300,boxShadow:"0 2px 10px rgba(0,0,0,.08)"}}>
+        {/* Desktop top bar */}
         <div className="nav-top" style={{background:"#1c1c1c",padding:"4px 24px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <span style={{color:"#888",fontSize:11,fontWeight:600}}>📍 Algérie — Import direct Chine</span>
           <div style={{display:"flex",gap:20}}>
@@ -239,10 +245,12 @@ const Navbar = ({page, setPage, search, setSearch}) => {
             ))}
           </div>
         </div>
+        {/* Main nav bar */}
         <div className="nav-main" style={{padding:"0 16px",height:58,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
+          {/* Logo */}
           <div style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",flexShrink:0}} onClick={()=>navigate("home")}>
             <img src="/logo.png" alt="El Warcha Auto"
-              style={{height:100,width:"auto",objectFit:"contain",flexShrink:0}}
+              style={{height:40,width:"auto",objectFit:"contain",flexShrink:0}}
               onError={e=>{e.target.style.display="none";e.target.nextSibling.style.display="flex";}}/>
             <div style={{display:"none",width:34,height:34,background:"#d36135",borderRadius:6,alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🔧</div>
             <div>
@@ -250,14 +258,17 @@ const Navbar = ({page, setPage, search, setSearch}) => {
               <div style={{fontSize:8,color:"#9a9a9a",fontWeight:700,letterSpacing:".1em"}}>IMPORT • VENTE • ALGÉRIE</div>
             </div>
           </div>
+          {/* Desktop search */}
           <div className="nav-search" style={{flex:1,maxWidth:440,position:"relative"}}>
             <input className="f" placeholder="🔍  Marque, modèle, année..." value={search} onChange={e=>setSearch(e.target.value)}
               onKeyDown={e=>{if(e.key==="Enter"&&page!=="home")setPage("home");}}
               style={{borderRadius:20,paddingRight:search?32:16,fontSize:13,borderColor:"#e5e5e5",height:34}}/>
             {search&&<button onClick={()=>setSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:"#9a9a9a",fontSize:13,padding:2}}>✕</button>}
           </div>
+          {/* Right side */}
           <div style={{display:"flex",gap:8,flexShrink:0,alignItems:"center"}}>
             <button className="btn-red" onClick={()=>navigate("add-car")} style={{fontSize:12,padding:"7px 14px"}}>+ Voiture</button>
+            {/* Hamburger — mobile only */}
             <button className="mobile-nav" onClick={()=>setSidebarOpen(true)}
               style={{flexDirection:"column",gap:4,background:"none",border:"none",padding:"6px",cursor:"pointer",borderRadius:6}}>
               <span style={{display:"block",width:22,height:2,background:"#1c1c1c",borderRadius:2}}/>
@@ -266,6 +277,7 @@ const Navbar = ({page, setPage, search, setSearch}) => {
             </button>
           </div>
         </div>
+        {/* Mobile search bar below nav */}
         <div className="mobile-nav" style={{padding:"8px 14px 10px",borderTop:"1px solid #f0f0f0"}}>
           <div style={{position:"relative",width:"100%"}}>
             <input className="f" placeholder="🔍  Rechercher..." value={search} onChange={e=>setSearch(e.target.value)}
@@ -276,9 +288,12 @@ const Navbar = ({page, setPage, search, setSearch}) => {
         </div>
       </nav>
 
+      {/* Sidebar overlay */}
       {sidebarOpen&&<div className="sidebar-overlay" onClick={()=>setSidebarOpen(false)}/>}
 
+      {/* Sidebar drawer */}
       <div className={"sidebar"+(sidebarOpen?" open":"")}>
+        {/* Sidebar header */}
         <div style={{background:"#1c1c1c",padding:"16px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <div style={{width:32,height:32,background:"#d36135",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,flexShrink:0}}>🔧</div>
@@ -289,6 +304,8 @@ const Navbar = ({page, setPage, search, setSearch}) => {
           </div>
           <button onClick={()=>setSidebarOpen(false)} style={{background:"rgba(255,255,255,.1)",border:"none",color:"#fff",width:30,height:30,borderRadius:6,fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>✕</button>
         </div>
+
+        {/* Nav items */}
         <div style={{flex:1,overflowY:"auto",padding:"12px 10px"}}>
           {NAV_ITEMS.map(item=>{
             const active = page===item.id;
@@ -301,13 +318,17 @@ const Navbar = ({page, setPage, search, setSearch}) => {
               </button>
             );
           })}
+
           <div style={{borderTop:"1px solid #f0f0f0",margin:"12px 0"}}/>
+
           <button onClick={()=>navigate("add-car")}
             style={{width:"100%",display:"flex",alignItems:"center",gap:14,padding:"13px 14px",borderRadius:10,border:"none",background:"#d36135",color:"#fff",fontFamily:"'Barlow',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",textAlign:"left"}}>
             <span style={{fontSize:20,flexShrink:0}}>➕</span>
             <span>Ajouter une voiture</span>
           </button>
         </div>
+
+        {/* Sidebar footer */}
         <div style={{padding:"14px 20px",borderTop:"1px solid #f0f0f0",flexShrink:0}}>
           <p style={{fontSize:10,color:"#bbb",fontWeight:600,letterSpacing:".06em",textAlign:"center"}}>EL WARCHA AUTO © 2025</p>
         </div>
@@ -537,7 +558,7 @@ const CarCard = ({car, settings, onClick, onCatalogue}) => {
 
 const HomePage = ({cars, settings, loading, setPage, setSelectedCar, setCatalogueCar, search, setSearch}) => {
   const [filters, setFilters] = useState({...EMPTY_FILTERS});
-  const [sortHome, setSortHome] = useState("default");
+  const [sortHome, setSortHome] = useState("default"); // default | dzd_asc | dzd_desc | fob_asc | fob_desc
   const filtered = cars.filter(c => {
     const q = search.toLowerCase();
     if (q && !((c.brand+" "+c.model+" "+c.year+" "+(c.trim||"")+" "+(c.dealers?.name||"")).toLowerCase().includes(q))) return false;
@@ -562,10 +583,13 @@ const HomePage = ({cars, settings, loading, setPage, setSelectedCar, setCatalogu
     return [...filtered].sort((a, b) => {
       const getDZD = c => calcDZD(c.price_cny, settings, c.price_fob||c.price_usd, 'USD') || 0;
       const getFOB = c => parseFloat(c.price_fob) || 0;
-      if (sortHome === "dzd_asc")  return getDZD(a) - getDZD(b);
-      if (sortHome === "dzd_desc") return getDZD(b) - getDZD(a);
-      if (sortHome === "fob_asc")  return getFOB(a) - getFOB(b);
-      if (sortHome === "fob_desc") return getFOB(b) - getFOB(a);
+      const getDate = c => new Date(c.created_at||0).getTime();
+      if (sortHome === "date_asc")  return getDate(a) - getDate(b);
+      if (sortHome === "date_desc") return getDate(b) - getDate(a);
+      if (sortHome === "dzd_asc")   return getDZD(a) - getDZD(b);
+      if (sortHome === "dzd_desc")  return getDZD(b) - getDZD(a);
+      if (sortHome === "fob_asc")   return getFOB(a) - getFOB(b);
+      if (sortHome === "fob_desc")  return getFOB(b) - getFOB(a);
       return 0;
     });
   }, [filtered, sortHome, settings]);
@@ -599,7 +623,15 @@ const HomePage = ({cars, settings, loading, setPage, setSelectedCar, setCatalogu
         <div style={{display:"flex",alignItems:"center",gap:7}}>
           <span style={{fontSize:11,color:"#9a9a9a",fontWeight:600}}>Trier :</span>
           <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-            {[{v:"default",l:"Par défaut"},{v:"fob_asc",l:"FOB ↑"},{v:"fob_desc",l:"FOB ↓"},{v:"dzd_asc",l:"DZD ↑"},{v:"dzd_desc",l:"DZD ↓"}].map(o=>(
+            {[
+              {v:"default",   l:"Par défaut"},
+              {v:"date_desc", l:"Date ↓"},
+              {v:"date_asc",  l:"Date ↑"},
+              {v:"fob_asc",   l:"FOB ↑"},
+              {v:"fob_desc",  l:"FOB ↓"},
+              {v:"dzd_asc",   l:"DZD ↑"},
+              {v:"dzd_desc",  l:"DZD ↓"},
+            ].map(o=>(
               <button key={o.v} onClick={()=>setSortHome(o.v)}
                 style={{fontSize:11,padding:"3px 10px",borderRadius:20,border:"1px solid",borderColor:sortHome===o.v?"#d36135":"#ddd",background:sortHome===o.v?"#d36135":"#fff",color:sortHome===o.v?"#fff":"#555",fontWeight:700,cursor:"pointer",transition:"all .15s"}}>
                 {o.l}
@@ -668,11 +700,13 @@ const Sec = ({title,children}) => (
 const CarForm = ({initial, initialEq, dealers, settings, onSubmit, onCancel, submitLabel, loading}) => {
   const [form, setForm] = useState(initial);
   const [eq,   setEq]   = useState(initialEq);
+  // Each entry: {src: string (dataURL or http URL), file: File|null}
   const [photos, setPhotos] = useState(
     (initial._existingPhotos||[]).map(url=>({src:url, file:null}))
   );
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}));
 
+  // Prix total = FOB + frais de transport
   const fobVal    = parseFloat(form.price_fob) || 0;
   const shipFee   = parseFloat(settings?.shipment_fee_usd) || 0;
   const totalUSD  = fobVal > 0 ? fobVal + shipFee : 0;
@@ -715,6 +749,18 @@ const CarForm = ({initial, initialEq, dealers, settings, onSubmit, onCancel, sub
         <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,fontWeight:600}}>
           <input type="checkbox" checked={form.negotiable} onChange={e=>setForm(f=>({...f,negotiable:e.target.checked}))} style={{width:14,height:14,accentColor:"#d36135"}}/>Prix négociable
         </label>
+      </Sec>
+      <Sec title="Date d'ajout">
+        <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:8,alignItems:"end"}}>
+          <FF label="Date et heure d'ajout">
+            <input className="f" type="datetime-local" value={form.custom_date||''} onChange={set("custom_date")}/>
+          </FF>
+          <button type="button" className="btn-out" onClick={()=>setForm(f=>({...f,custom_date:new Date().toISOString().slice(0,16)}))}
+            style={{fontSize:11,padding:"8px 12px",whiteSpace:"nowrap",height:38}}>
+            🕐 Maintenant
+          </button>
+        </div>
+        <p style={{fontSize:11,color:"#9a9a9a",marginTop:4}}>Laissez vide pour utiliser la date d'enregistrement automatique.</p>
       </Sec>
       <Sec title="Prix">
         <FF label="Prix FOB ($) — Free On Board" required>
@@ -784,6 +830,7 @@ const AddCarPage = ({dealers, settings, setPage, onAdd, showToast}) => {
         price_usd: form.price_fob && settings?.shipment_fee_usd !== undefined
           ? (parseFloat(form.price_fob)||0) + (parseFloat(settings.shipment_fee_usd)||0)
           : parseFloat(form.price_fob)||null,
+        ...(form.custom_date ? {created_at: new Date(form.custom_date).toISOString()} : {}),
         price_currency: 'USD',
         price_cny: null,
         doors: parseInt(form.doors)||null,
@@ -791,11 +838,13 @@ const AddCarPage = ({dealers, settings, setPage, onAdd, showToast}) => {
       };
       delete data._existingPhotos;
       const newCar = await createCar(data, eq);
+      // Upload all photos
       let photoUrls = [];
       for (const file of files) {
         try { const url = await uploadCarPhoto(newCar.id, file); if (url) photoUrls.push(url); } catch(_) {}
       }
       if (photoUrls.length) await updateCar(newCar.id, {photos: photoUrls});
+      // Resolve dealer from the dealers list (compare as strings to be safe)
       const dealerObj = dealers.find(d => String(d.id) === String(form.dealer_id)) || null;
       onAdd({...newCar, photos: photoUrls, car_equipment: [eq], dealers: dealerObj});
       showToast("Voiture ajoutée !", "success");
@@ -834,6 +883,7 @@ const CarDetailPage = ({car, settings, setPage, onDelete, onUpdate, showToast, d
                 <>
                   <button onClick={e=>{e.stopPropagation();setActivePhoto(p=>(p-1+photos.length)%photos.length);}} style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",background:"rgba(0,0,0,.55)",color:"#fff",border:"none",borderRadius:"50%",width:40,height:40,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center"}}>‹</button>
                   <button onClick={e=>{e.stopPropagation();setActivePhoto(p=>(p+1)%photos.length);}} style={{position:"absolute",right:14,top:"50%",transform:"translateY(-50%)",background:"rgba(0,0,0,.55)",color:"#fff",border:"none",borderRadius:"50%",width:40,height:40,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center"}}>›</button>
+                  <div style={{position:"absolute",bottom:12,right:14,background:"rgba(0,0,0,.6)",color:"#fff",fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:12}}>{activePhoto+1}/{photos.length}</div>
                 </>
               )}
               <div style={{position:"absolute",top:12,left:12,display:"flex",gap:5}}>
@@ -921,6 +971,7 @@ const EditCarPage = ({car, settings, setPage, onUpdate, showToast, onCancel, dea
   const [loading, setLoading] = useState(false);
   const initialForm = {
     _existingPhotos: car.photos||[],
+    custom_date: car.created_at ? new Date(car.created_at).toISOString().slice(0,16) : '',
     price_fob: car.price_fob||"",
     dealer_id: car.dealer_id||"",
     brand: car.brand||"", model: car.model||"", year: car.year||"",
@@ -948,6 +999,9 @@ const EditCarPage = ({car, settings, setPage, onUpdate, showToast, onCancel, dea
       data.price_cny = null;
       data.price_currency = 'USD';
       data.doors = parseInt(data.doors)||null;
+      if (data.custom_date) { data.created_at = new Date(data.custom_date).toISOString(); }
+      delete data.custom_date;
+      // Keep existing http URLs that weren't removed, then append new uploads
       const existingUrls = allPreviews.filter(p => typeof p==="string" && p.startsWith("http"));
       let newUrls = [];
       for (const file of newFiles) {
@@ -955,6 +1009,7 @@ const EditCarPage = ({car, settings, setPage, onUpdate, showToast, onCancel, dea
       }
       const allPhotos = [...existingUrls, ...newUrls];
       await updateCar(car.id, {...data, photos: allPhotos}, eq);
+      // Resolve updated dealer name from full list
       const dealerObj = dealers.find(d => String(d.id) === String(data.dealer_id)) || car.dealers || null;
       onUpdate({...car, ...data, photos: allPhotos, car_equipment: [eq], dealers: dealerObj});
       showToast("Voiture modifiée !", "success");
@@ -1024,7 +1079,7 @@ const DealersPage = ({dealers, cars, loading, setPage, setSelectedDealer, onDele
   );
 };
 
-const DealerDetailPage = ({dealer, cars, settings, setPage, setSelectedCar, setSelectedDealer, onDeleteDealer, setCatalogueCar}) => {
+const DealerDetailPage = ({dealer, cars, settings, setPage, setSelectedCar, setSelectedDealer, onDeleteDealer}) => {
   const dc=cars.filter(c=>c.dealer_id===dealer.id);
   return (
     <div className="page-wrap" style={{padding:"86px 20px 60px",maxWidth:1200,margin:"0 auto"}}>
@@ -1134,7 +1189,6 @@ const EditDealerPage = ({dealer, setPage, onUpdate, showToast}) => {
     </div>
   );
 };
-
 const SettingsPage = ({settings, setSettings, showToast}) => {
   const [form, setForm] = useState({
     cny_usd_rate:     settings?.cny_usd_rate     || '',
@@ -1249,20 +1303,31 @@ const EXPORT_FIELDS = [
   {k:"dealers.name",l:"Concessionnaire"},
 ];
 const GROUP_OPTIONS = [
-  {k:"dealers.name",l:"Concessionnaire"},{k:"brand",l:"Marque"},{k:"brand_model",l:"Marque + Modèle"},
-  {k:"model",l:"Modèle"},{k:"transmission",l:"Transmission"},{k:"status",l:"Statut"},
-  {k:"condition",l:"Condition"},{k:"fuel_type",l:"Carburant"},{k:"body_type",l:"Carrosserie"},
-  {k:"color",l:"Couleur"},{k:"origin",l:"Origine"},{k:"year",l:"Année"},
+  {k:"dealers.name",l:"Concessionnaire"},
+  {k:"brand",l:"Marque"},
+  {k:"brand_model",l:"Marque + Modèle"},
+  {k:"model",l:"Modèle"},
+  {k:"transmission",l:"Transmission"},
+  {k:"status",l:"Statut"},
+  {k:"condition",l:"Condition"},
+  {k:"fuel_type",l:"Carburant"},
+  {k:"body_type",l:"Carrosserie"},
+  {k:"color",l:"Couleur"},
+  {k:"origin",l:"Origine"},
+  {k:"year",l:"Année"},
 ];
 const SORT_OPTIONS = [
   {k:"price_fob",l:"Prix FOB"},{k:"total_usd",l:"Total USD"},{k:"total_dzd",l:"Total DZD"},
-  {k:"year",l:"Année"},{k:"mileage",l:"Kilométrage"},{k:"brand",l:"Marque"},
-  {k:"model",l:"Modèle"},{k:"dealers.name",l:"Concessionnaire"},
+  {k:"year",l:"Année"},{k:"mileage",l:"Kilométrage"},
+  {k:"brand",l:"Marque"},{k:"model",l:"Modèle"},
+  {k:"dealers.name",l:"Concessionnaire"},
 ];
 
+// PDF-safe number formatter — uses narrow space as thousands separator (no / or ,)
 const fmtPDF = n => { if (n == null) return "-"; return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " "); };
 
 const getFieldVal = (car, key, settings=null) => {
+  // Computed keys — must be checked BEFORE the early-return on car[key]
   if (key === "brand_model") return (car.brand||"?") + " " + (car.model||"?");
   if (key === "dealers.name") return car.dealers?.name || "—";
   if (key === "total_usd") {
@@ -1275,6 +1340,7 @@ const getFieldVal = (car, key, settings=null) => {
     const dzd = calcDZD(null, settings, parseFloat(car.price_fob)||parseFloat(car.price_usd)||0, 'USD');
     return dzd ? fmtPDF(dzd)+" DZD" : "—";
   }
+  // Real car fields
   const v = car[key];
   if (v === null || v === undefined || v === "") return "—";
   if (key === "negotiable") return v ? "Oui" : "Non";
@@ -1334,10 +1400,15 @@ const MobileExportConfig = ({groupBy, setGroupBy, sortBy, setSortBy, sortDir, se
   );
 };
 
+
 const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
   const BASE_URL = window.location.origin;
+
+  // ── Filter state (same as HomePage) ──
   const [filters, setFilters]   = useState({...EMPTY_FILTERS});
   const [search,  setSearch2]   = useState("");
+
+  // ── Export config ──
   const [groupBy,   setGroupBy]   = useState("dealers.name");
   const [sortBy,    setSortBy]    = useState("price_cny");
   const [sortDir,   setSortDir]   = useState("asc");
@@ -1346,6 +1417,7 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
 
   const toggleField = k => setSelFields(f => f.includes(k) ? f.filter(x=>x!==k) : [...f,k]);
 
+  // Apply filters (same logic as HomePage)
   const filtered = cars.filter(c => {
     const q = search.toLowerCase();
     if (q && !((c.brand+" "+c.model+" "+c.year+" "+(c.trim||"")+" "+(c.dealers?.name||"")).toLowerCase().includes(q))) return false;
@@ -1366,15 +1438,24 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
     return true;
   });
 
+  // Sort helper
   const getSortVal = (car, key) => {
     if (key === "dealers.name") return car.dealers?.name?.toLowerCase() || "";
-    if (key === "total_usd") { const fob=parseFloat(car.price_fob)||0; const ship=parseFloat(settings?.shipment_fee_usd)||0; return fob>0?fob+ship:0; }
-    if (key === "total_dzd") return calcDZD(car.price_cny, settings, car.price_fob||car.price_usd, 'USD') || 0;
+    // Computed numeric keys
+    if (key === "total_usd") {
+      const fob  = parseFloat(car.price_fob)||0;
+      const ship = parseFloat(settings?.shipment_fee_usd)||0;
+      return fob > 0 ? fob + ship : 0;
+    }
+    if (key === "total_dzd") {
+      return calcDZD(car.price_cny, settings, car.price_fob||car.price_usd, 'USD') || 0;
+    }
     if (key === "price_fob") return parseFloat(car.price_fob)||0;
     const v = car[key];
     return typeof v === "string" ? v.toLowerCase() : (v ?? 0);
   };
 
+  // Group + sort
   const grouped = React.useMemo(() => {
     const sorted = [...filtered].sort((a,b) => {
       const va = getSortVal(a, sortBy), vb = getSortVal(b, sortBy);
@@ -1393,99 +1474,220 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
 
   const totalCars = filtered.length;
 
+  // ── PDF Generation ──
   const exportPDF = async () => {
     setPrinting(true);
     try {
+      // Dynamically load jsPDF + autoTable from CDN
       if (!window.jspdf) {
-        await new Promise((res, rej) => { const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
+        await new Promise((res, rej) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+          s.onload = res; s.onerror = rej;
+          document.head.appendChild(s);
+        });
       }
       if (!window.jspdf?.jsPDF?.prototype?.autoTable) {
-        await new Promise((res, rej) => { const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js'; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
+        await new Promise((res, rej) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js';
+          s.onload = res; s.onerror = rej;
+          document.head.appendChild(s);
+        });
       }
+
       const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
       const cols = selFields.map(k => EXPORT_FIELDS.find(f=>f.k===k)).filter(Boolean);
       const now  = new Date().toLocaleString("fr-DZ");
       const fileName = `elwarcha-export-${new Date().toISOString().slice(0,10)}.pdf`;
+
+      // ── PAGE HEADER ──────────────────────────────────────────
       const drawHeader = () => {
-        doc.setFillColor(232, 0, 29); doc.rect(0, 0, 297, 1.5, 'F');
-        doc.setTextColor(28,28,28); doc.setFontSize(14); doc.setFont('helvetica','bold'); doc.text('El Warcha Auto', 10, 11);
-        doc.setFontSize(6.5); doc.setFont('helvetica','normal'); doc.setTextColor(160,160,160); doc.text('IMPORT · VENTE · ALGERIE', 10, 16);
+        doc.setFillColor(232, 0, 29);
+        doc.rect(0, 0, 297, 1.5, 'F');
+        doc.setTextColor(28, 28, 28);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('El Warcha Auto', 10, 11);
+        doc.setFontSize(6.5);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(160, 160, 160);
+        doc.text('IMPORT · VENTE · ALGERIE', 10, 16);
         const sortLabel = SORT_OPTIONS.find(s=>s.k===sortBy)?.l || '';
         const groupLabel = GROUP_OPTIONS.find(g=>g.k===groupBy)?.l || '';
         const meta = `${now}   ·   ${totalCars} vehicule${totalCars!==1?'s':''}   ·   Groupe: ${groupLabel}   ·   Tri: ${sortLabel} (${sortDir==='asc'?'croissant':'decroissant'})`;
-        doc.setFontSize(6); doc.setTextColor(140,140,140); doc.text(meta, 289, 10, { align: 'right' });
+        doc.setFontSize(6);
+        doc.setTextColor(140, 140, 140);
+        doc.text(meta, 289, 10, { align: 'right' });
+
       };
-      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
       drawHeader();
+
       let startY = 24;
+
       grouped.forEach(([gName, gcars]) => {
         if (startY > 182) { doc.addPage(); drawHeader(); startY = 24; }
-        doc.setFillColor(232,0,29); doc.rect(8, startY, 2.5, 7, 'F');
-        doc.setTextColor(28,28,28); doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.text(gName, 13.5, startY+5);
+
+        // ── GROUP LABEL ────────────────────────────────────────
+        doc.setFillColor(232, 0, 29);
+        doc.rect(8, startY, 2.5, 7, 'F');
+        doc.setTextColor(28, 28, 28);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text(gName, 13.5, startY + 5);
+        const countTxt = `    (${gcars.length} vehicule${gcars.length!==1?'s':''})`;
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(130, 130, 130);
+
         startY += 10;
+
+        // ── TABLE ──────────────────────────────────────────────
         const head = [cols.map(c => c.l).concat('Lien')];
+
         const rowVals = gcars.map(car => {
           const params = new URLSearchParams();
-          if (car.brand) params.set('brand', car.brand);
-          if (car.model) params.set('model', car.model);
-          if (car.year) params.set('year', String(car.year));
+          if (car.brand)         params.set('brand',  car.brand);
+          if (car.model)         params.set('model',  car.model);
+          if (car.year)          params.set('year',   String(car.year));
           if (car.dealers?.name) params.set('dealer', car.dealers.name);
-          if (car.trim) params.set('trim', car.trim);
-          if (car.color) params.set('color', car.color);
+          if (car.trim)          params.set('trim',   car.trim);
+          if (car.color)         params.set('color',  car.color);
           const link = BASE_URL + '/?' + params.toString();
           return { cells: cols.map(col => getFieldVal(car, col.k, settings)), link };
         });
-        const EVEN_BG=[255,255,255], ODD_BG=[244,246,250];
-        const groups2 = [];
-        let gIdx2 = 0;
+
+        // ── FLAT TABLE WITH VISUAL GROUPING ───────────────────
+        // Simple approach: one flat table, alternating light/white bg per brand group.
+        // Repeated values in key columns are blanked. No borders between same-group rows.
+
+        // Detect group boundaries: a new group starts when brand OR model changes
+        const EVEN_BG = [255, 255, 255];
+        const ODD_BG  = [244, 246, 250];
+
+        // Build groups: [{start, end, bg}]
+        const groups = [];
+        let gIdx = 0;
         rowVals.forEach((row, ri) => {
-          const newGroup = ri===0 || row.cells[0]!==rowVals[ri-1].cells[0] || row.cells[1]!==rowVals[ri-1].cells[1];
-          if (newGroup) { groups2.push({start:ri,end:ri,bg:gIdx2++%2===0?EVEN_BG:ODD_BG}); }
-          else { groups2[groups2.length-1].end = ri; }
+          const newGroup = ri === 0
+            || row.cells[0] !== rowVals[ri-1].cells[0]
+            || row.cells[1] !== rowVals[ri-1].cells[1];
+          if (newGroup) { groups.push({start: ri, end: ri, bg: gIdx++ % 2 === 0 ? EVEN_BG : ODD_BG}); }
+          else { groups[groups.length-1].end = ri; }
         });
-        const rowGroupInfo = rowVals.map((_,ri) => groups2.find(g => ri>=g.start && ri<=g.end));
-        const showAt = cols.map((_,ci) => {
+
+        // For each row, know its group info
+        const rowGroupInfo = rowVals.map((_, ri) => groups.find(g => ri >= g.start && ri <= g.end));
+
+        // For each cell col, compute which row is the "middle" of its value span within the group
+        // So text appears centered vertically in the merged span
+        const showAt = cols.map((_, ci) => {
           const result = new Array(rowVals.length).fill(false);
           let spanStart = 0;
-          for (let ri=0; ri<=rowVals.length; ri++) {
-            const ended = ri===rowVals.length || rowVals[ri].cells[ci]!==rowVals[spanStart].cells[ci] || rowGroupInfo[ri]!==rowGroupInfo[spanStart];
-            if (ended) { result[Math.floor((spanStart+ri-1)/2)] = true; spanStart = ri; }
+          for (let ri = 0; ri <= rowVals.length; ri++) {
+            const ended = ri === rowVals.length
+              || rowVals[ri].cells[ci] !== rowVals[spanStart].cells[ci]
+              || rowGroupInfo[ri] !== rowGroupInfo[spanStart];
+            if (ended) {
+              // show at middle row of span
+              const mid = Math.floor((spanStart + ri - 1) / 2);
+              result[mid] = true;
+              spanStart = ri;
+            }
           }
           return result;
         });
+
         const body = rowVals.map((row, ri) => {
-          const grp=rowGroupInfo[ri], bg=grp.bg, isFirst=ri===grp.start, isLast=ri===grp.end, OUTER=[180,180,180];
-          return row.cells.map((val,ci) => ({
+          const grp          = rowGroupInfo[ri];
+          const bg           = grp.bg;
+          const isFirst      = ri === grp.start;
+          const isLast       = ri === grp.end;
+          const OUTER        = [180, 180, 180];  // group outer border
+          const NONE         = bg;               // invisible = same as bg
+
+          return row.cells.map((val, ci) => ({
             content: showAt[ci][ri] ? val : '',
-            styles: { fillColor:bg, textColor:[30,30,30], valign:'middle', lineWidth:{top:isFirst?0.4:0,right:0.4,bottom:isLast?0.4:0,left:0.4}, lineColor:OUTER },
+            styles: {
+              fillColor: bg,
+              textColor: [30, 30, 30],
+              valign: 'middle',
+              lineWidth: { top: isFirst ? 0.4 : 0, right: 0.4, bottom: isLast ? 0.4 : 0, left: 0.4 },
+              lineColor: OUTER,
+            },
           })).concat({
-            content:'Voir fiche',
-            styles: { fillColor:bg, textColor:[210,0,20], fontStyle:'bold', fontSize:7, halign:'center', valign:'middle', lineWidth:{top:isFirst?0.4:0,right:0.4,bottom:isLast?0.4:0,left:0.4}, lineColor:OUTER },
+            content: 'Voir fiche',
+            styles: {
+              fillColor: bg,
+              textColor: [210, 0, 20],
+              fontStyle: 'bold',
+              fontSize: 7,
+              halign: 'center',
+              valign: 'middle',
+              lineWidth: { top: isFirst ? 0.4 : 0, right: 0.4, bottom: isLast ? 0.4 : 0, left: 0.4 },
+              lineColor: OUTER,
+            },
             link: row.link,
           });
         });
-        const colStyles = {}; colStyles[cols.length] = { cellWidth:20, halign:'center' };
+
+        const colStyles = {};
+        colStyles[cols.length] = { cellWidth: 20, halign: 'center' };
+
         doc.autoTable({
-          head, body, startY, theme:'plain',
-          styles: { fontSize:7.5, cellPadding:{top:3,right:3,bottom:3,left:3}, overflow:'ellipsize', textColor:[30,30,30], lineWidth:0.25 },
-          headStyles: { fillColor:[40,40,40], textColor:[255,255,255], fontStyle:'bold', fontSize:7, lineWidth:0 },
-          columnStyles: colStyles, margin:{left:8,right:8}, tableLineColor:[200,200,200], tableLineWidth:0.3,
+          head,
+          body,
+          startY,
+          theme: 'plain',
+          styles: {
+            fontSize: 7.5,
+            cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
+            overflow: 'ellipsize',
+            textColor: [30, 30, 30],
+            lineWidth: 0.25,
+          },
+          headStyles: {
+            fillColor: [40, 40, 40],
+            textColor: [255, 255, 255],
+            fontStyle: 'bold',
+            fontSize: 7,
+            lineWidth: 0,
+          },
+          columnStyles: colStyles,
+          margin: { left: 8, right: 8 },
+          tableLineColor: [200, 200, 200],
+          tableLineWidth: 0.3,
           didDrawCell: (data) => {
-            if (data.section!=='body') return;
-            const ri=data.row.index, ci=data.column.index;
-            if (ci===cols.length && rowVals[ri]?.link) doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url: rowVals[ri].link });
+            if (data.section !== 'body') return;
+            const ri = data.row.index;
+            const ci = data.column.index;
+            if (ci === cols.length && rowVals[ri]?.link) {
+              doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url: rowVals[ri].link });
+            }
           },
         });
         startY = doc.lastAutoTable.finalY + 8;
       });
+
+      // ── FOOTER on every page ──────────────────────────────────
       const pageCount = doc.getNumberOfPages();
-      for (let i=1; i<=pageCount; i++) {
-        doc.setPage(i); doc.setFontSize(6.5); doc.setTextColor(170,170,170); doc.setFont('helvetica','normal');
-        doc.text('El Warcha Auto', 8, 205.5); doc.text(`${i} / ${pageCount}`, 289, 205.5, { align:'right' });
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+
+        doc.setFontSize(6.5);
+        doc.setTextColor(170, 170, 170);
+        doc.setFont('helvetica', 'normal');
+        doc.text('El Warcha Auto', 8, 205.5);
+        doc.text(`${i} / ${pageCount}`, 289, 205.5, { align: 'right' });
       }
+
       doc.save(fileName);
-    } catch(e) { showToast('Erreur export PDF: ' + e.message, 'error'); }
-    finally { setPrinting(false); }
+    } catch(e) {
+      showToast('Erreur export PDF: ' + e.message, 'error');
+    } finally {
+      setPrinting(false);
+    }
   };
 
   return (
@@ -1502,8 +1704,10 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
           </button>
         </div>
       </div>
+
       <div className="export-grid" style={{display:"grid",gridTemplateColumns:"1fr 340px",gap:14,alignItems:"start"}}>
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          {/* Filters */}
           <SearchPanel filters={filters} setFilters={setFilters} cars={cars}/>
           <div className="card" style={{padding:14}}>
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
@@ -1511,6 +1715,8 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
               {search&&<button className="btn-out" onClick={()=>setSearch2("")} style={{fontSize:11}}>✕</button>}
             </div>
           </div>
+
+          {/* Preview */}
           <div className="card" style={{padding:14}}>
             <h3 style={{fontSize:13,fontWeight:800,textTransform:"uppercase",letterSpacing:".06em",marginBottom:10}}>Aperçu du résultat</h3>
             {grouped.length===0
@@ -1538,6 +1744,8 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
             }
           </div>
         </div>
+
+        {/* Config panel */}
         <div className="sticky-sidebar" style={{display:"flex",flexDirection:"column",gap:12,position:"sticky",top:96}}>
           <div className="card" style={{padding:16}}>
             <h3 style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:".06em",marginBottom:12,paddingBottom:8,borderBottom:"1px solid #e5e5e5"}}>🗂 Grouper par</h3>
@@ -1545,6 +1753,7 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
               {GROUP_OPTIONS.map(o=><option key={o.k} value={o.k}>{o.l}</option>)}
             </select>
           </div>
+
           <div className="card" style={{padding:16}}>
             <h3 style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:".06em",marginBottom:12,paddingBottom:8,borderBottom:"1px solid #e5e5e5"}}>↕ Trier par</h3>
             <select className="f" value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{fontSize:13,marginBottom:8}}>
@@ -1552,16 +1761,21 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
             </select>
             <div style={{display:"flex",gap:0,borderRadius:8,overflow:"hidden",border:"1.5px solid #ddd"}}>
               {[{v:"asc",l:"⬆ Croissant"},{v:"desc",l:"⬇ Décroissant"}].map(d=>(
-                <button key={d.v} onClick={()=>setSortDir(d.v)} style={{flex:1,padding:"7px 4px",fontSize:11,fontWeight:700,border:"none",background:sortDir===d.v?"#1c1c1c":"#fff",color:sortDir===d.v?"#fff":"#555",cursor:"pointer"}}>{d.l}</button>
+                <button key={d.v} onClick={()=>setSortDir(d.v)}
+                  style={{flex:1,padding:"7px 4px",fontSize:11,fontWeight:700,border:"none",background:sortDir===d.v?"#1c1c1c":"#fff",color:sortDir===d.v?"#fff":"#555",cursor:"pointer"}}>
+                  {d.l}
+                </button>
               ))}
             </div>
           </div>
+
           <div className="card" style={{padding:16}}>
             <h3 style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:".06em",marginBottom:12,paddingBottom:8,borderBottom:"1px solid #e5e5e5"}}>📋 Colonnes dans le PDF</h3>
             <div style={{display:"flex",flexDirection:"column",gap:5}}>
               {EXPORT_FIELDS.map(f=>(
                 <label key={f.k} style={{display:"flex",alignItems:"center",gap:7,fontSize:12,fontWeight:600,cursor:"pointer",padding:"4px 6px",borderRadius:5,background:selFields.includes(f.k)?"#f0fdf4":"transparent",border:"1px solid "+(selFields.includes(f.k)?"#a7f3d0":"transparent")}}>
-                  <input type="checkbox" checked={selFields.includes(f.k)} onChange={()=>toggleField(f.k)} style={{accentColor:"#d36135",width:13,height:13}}/>{f.l}
+                  <input type="checkbox" checked={selFields.includes(f.k)} onChange={()=>toggleField(f.k)} style={{accentColor:"#d36135",width:13,height:13}}/>
+                  {f.l}
                 </label>
               ))}
             </div>
@@ -1572,6 +1786,7 @@ const ExportPage = ({cars, dealers, settings, setPage, showToast}) => {
     </div>
   );
 };
+
 
 // ============================================================
 // SQL GENERATOR PAGE
@@ -1604,8 +1819,12 @@ const buildCarSQL = (cars, dealerName, dealerUUID) => {
   ];
   cars.forEach((car, i) => {
     const cid = genUUIDv4();
-    const cols = ['id','dealer_id','brand','model','year','trim','body_type','condition','status','origin','price_usd','price_currency','fuel_type','transmission'];
-    const vals = [cid, dealerUUID, car.brand||'Autre', car.model||'', car.year||null, car.trim||null, car.body_type||'SUV','new','available','imported', car.price_usd||null,'USD', car.fuel_type||'Essence', car.transmission||null];
+    const cols = ['id','dealer_id','brand','model','year','trim','body_type',
+      'condition','status','origin','price_usd','price_currency','fuel_type','transmission'];
+    const vals = [cid, dealerUUID,
+      car.brand||'Autre', car.model||'', car.year||null, car.trim||null,
+      car.body_type||'SUV','new','available','imported',
+      car.price_usd||null,'USD', car.fuel_type||'Essence', car.transmission||null];
     if (car.description) { cols.push('description'); vals.push(car.description); }
     if (car.price_fob)   { cols.push('price_fob');   vals.push(car.price_fob); }
     if (car.engine_size) { cols.push('engine_size'); vals.push(car.engine_size); }
@@ -1666,7 +1885,12 @@ const SQLGeneratorPage = ({showToast}) => {
       const resp = await fetch('http://localhost:3001/api/anthropic', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 8000, system: SYSTEM_PROMPT, messages: [{ role: 'user', content: rawText }] })
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 8000,
+          system: SYSTEM_PROMPT,
+          messages: [{ role: 'user', content: rawText }]
+        })
       });
       const data = await resp.json();
       if (data.error) throw new Error(data.error.message);
@@ -1675,14 +1899,27 @@ const SQLGeneratorPage = ({showToast}) => {
       if (!Array.isArray(cars) || cars.length === 0) throw new Error('Aucune voiture trouvée dans le texte.');
       const generated = buildCarSQL(cars, dealerName.trim(), uuid);
       setSql(generated);
-      setStats({ total:cars.length, colored:cars.filter(c=>c.color).length, fob:cars.filter(c=>c.price_fob).length, sunroof:cars.filter(c=>c.equipment?.sun_roof).length });
+      setStats({
+        total: cars.length,
+        colored: cars.filter(c=>c.color).length,
+        fob: cars.filter(c=>c.price_fob).length,
+        sunroof: cars.filter(c=>c.equipment?.sun_roof).length,
+      });
       saveHistory(dealerName.trim(), uuid, cars.length, rawText, generated);
       showToast(`${cars.length} voitures générées pour "${dealerName}"`, 'success');
-    } catch(e) { showToast('Erreur: ' + e.message, 'error'); }
-    finally { setLoading(false); }
+    } catch(e) {
+      showToast('Erreur: ' + e.message, 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleCopy = () => { navigator.clipboard.writeText(sql).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }); };
+  const handleCopy = () => {
+    navigator.clipboard.writeText(sql).then(() => {
+      setCopied(true); setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
   const handleDownload = () => {
     const blob = new Blob([sql], { type: 'text/plain' });
     const a = document.createElement('a');
@@ -1690,13 +1927,28 @@ const SQLGeneratorPage = ({showToast}) => {
     a.download = `${(dealerName||'dealer').toLowerCase().replace(/\s+/g,'-')}-${Date.now()}.sql`;
     a.click();
   };
-  const loadFromHistory = h => { setDealerName(h.name); setDealerUUID(h.uuid); setRawText(h.text); setSql(h.sql || ''); setActiveTab('generate'); };
+
+  const loadFromHistory = h => {
+    setDealerName(h.name);
+    setDealerUUID(h.uuid);
+    setRawText(h.text);
+    setSql(h.sql || '');
+    setActiveTab('generate');
+  };
 
   const GTab = ({id, label}) => (
-    <button onClick={()=>setActiveTab(id)} style={{background:'none',border:'none',padding:'8px 16px',fontSize:13,fontWeight:700,color:activeTab===id?'#d36135':'#9a9a9a',cursor:'pointer',borderBottom:activeTab===id?'2px solid #d36135':'2px solid transparent',marginBottom:-1,transition:'color .15s'}}>{label}</button>
+    <button onClick={()=>setActiveTab(id)} style={{
+      background:'none', border:'none', padding:'8px 16px', fontSize:13, fontWeight:700,
+      color: activeTab===id ? '#d36135' : '#9a9a9a', cursor:'pointer',
+      borderBottom: activeTab===id ? '2px solid #d36135' : '2px solid transparent',
+      marginBottom:-1, transition:'color .15s',
+    }}>{label}</button>
   );
+
   const Tag = ({children}) => (
-    <span style={{display:'inline-block',background:'rgba(232,0,29,.1)',color:'#d36135',border:'1px solid rgba(232,0,29,.2)',borderRadius:4,padding:'1px 7px',fontSize:11,fontWeight:700,fontFamily:'monospace',margin:'2px 2px 2px 0'}}>{children}</span>
+    <span style={{display:'inline-block',background:'rgba(232,0,29,.1)',color:'#d36135',
+      border:'1px solid rgba(232,0,29,.2)',borderRadius:4,padding:'1px 7px',
+      fontSize:11,fontWeight:700,fontFamily:'monospace',margin:'2px 2px 2px 0'}}>{children}</span>
   );
 
   return (
@@ -1705,37 +1957,62 @@ const SQLGeneratorPage = ({showToast}) => {
         <h1 style={{fontSize:26,fontWeight:900,marginBottom:4}}>🛠 SQL <span style={{color:'#d36135'}}>Generator</span></h1>
         <p style={{color:'#9a9a9a',fontSize:13}}>Colle le texte brut d'un dealer — l'IA génère les INSERT SQL prêts à exécuter dans Supabase.</p>
       </div>
+
       <div className="sqlgen-grid" style={{display:'grid',gridTemplateColumns:'1fr 340px',gap:20,alignItems:'start'}}>
+        {/* LEFT */}
         <div>
+          {/* Tabs */}
           <div style={{borderBottom:'1px solid #e5e5e5',marginBottom:16,display:'flex'}}>
             <GTab id="generate" label="Générer SQL"/>
             <GTab id="history" label={`Historique (${history.length})`}/>
           </div>
+
           {activeTab === 'generate' && (
             <div style={{display:'flex',flexDirection:'column',gap:14}}>
+              {/* Dealer info */}
               <div className="card" style={{padding:18}}>
                 <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12,paddingBottom:8,borderBottom:'1px solid #e5e5e5'}}>
                   <div style={{width:3,height:15,background:'#d36135',borderRadius:2,flexShrink:0}}/>
                   <h3 style={{fontSize:13,fontWeight:800,textTransform:'uppercase',letterSpacing:'.06em'}}>Informations dealer</h3>
                 </div>
                 <div className="sqlgen-dealer-row" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
-                  <div><label className="lbl">Nom du dealer *</label><input className="f" value={dealerName} onChange={e=>setDealerName(e.target.value)} placeholder="ex: Lucas"/></div>
-                  <div><label className="lbl">UUID dealer (optionnel)</label><input className="f" value={dealerUUID} onChange={e=>setDealerUUID(e.target.value)} placeholder="Auto-généré" style={{fontFamily:'monospace',fontSize:11}}/></div>
+                  <div>
+                    <label className="lbl">Nom du dealer *</label>
+                    <input className="f" value={dealerName} onChange={e=>setDealerName(e.target.value)} placeholder="ex: Lucas"/>
+                  </div>
+                  <div>
+                    <label className="lbl">UUID dealer (optionnel)</label>
+                    <input className="f" value={dealerUUID} onChange={e=>setDealerUUID(e.target.value)} placeholder="Auto-généré" style={{fontFamily:'monospace',fontSize:11}}/>
+                  </div>
                 </div>
               </div>
+
+              {/* Text input */}
               <div className="card" style={{padding:18}}>
                 <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12,paddingBottom:8,borderBottom:'1px solid #e5e5e5'}}>
                   <div style={{width:3,height:15,background:'#d36135',borderRadius:2,flexShrink:0}}/>
                   <h3 style={{fontSize:13,fontWeight:800,textTransform:'uppercase',letterSpacing:'.06em'}}>Texte brut du dealer</h3>
                 </div>
-                <textarea className="f" value={rawText} onChange={e=>setRawText(e.target.value)} rows={12} style={{resize:'vertical',fontFamily:'monospace',fontSize:12,lineHeight:1.65}} placeholder={"- livan x3 pro MT / CVT\n  MT：7600$ (white/gray)\n  7700$ (black/silver)\n..."}/>
+                <textarea className="f" value={rawText} onChange={e=>setRawText(e.target.value)}
+                  rows={12} style={{resize:'vertical',fontFamily:'monospace',fontSize:12,lineHeight:1.65}}
+                  placeholder={"- livan x3 pro MT / CVT\n  MT：7600$ (white/gray)\n  7700$ (black/silver)\n- MG5 MT 2023 edition 7700$\n- Geely coolray super MT 8800$ (gray stock ready on port)\n- Jetour dashing 2026 full option 17800$ (English system)\n..."}/>
               </div>
-              <button className="btn-red" onClick={handleGenerate} disabled={loading} style={{padding:14,fontSize:14,justifyContent:'center',width:'100%'}}>
+
+              {/* Generate button */}
+              <button className="btn-red" onClick={handleGenerate} disabled={loading}
+                style={{padding:14,fontSize:14,justifyContent:'center',width:'100%'}}>
                 {loading ? '⏳ Génération en cours...' : '⚡ Générer SQL'}
               </button>
+
+              {/* Stats */}
               {stats && (
                 <div className="sqlgen-stats" style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8}}>
-                  {[{n:stats.total,l:'Voitures'},{n:stats.colored,l:'Avec couleur'},{n:stats.fob,l:'Prix FOB'},{n:stats.sunroof,l:'Toit ouvrant'}].map(s=>(
+                  {[
+                    {n:stats.total,   l:'Voitures'},
+                    {n:stats.colored, l:'Avec couleur'},
+                    {n:stats.fob,     l:'Prix FOB'},
+                    {n:stats.sunroof, l:'Toit ouvrant'},
+                  ].map(s=>(
                     <div key={s.l} className="card" style={{padding:'10px 14px',textAlign:'center'}}>
                       <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:26,color:'#d36135',lineHeight:1}}>{s.n}</div>
                       <div style={{fontSize:10,color:'#9a9a9a',fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',marginTop:2}}>{s.l}</div>
@@ -1743,20 +2020,28 @@ const SQLGeneratorPage = ({showToast}) => {
                   ))}
                 </div>
               )}
+
+              {/* SQL output */}
               {sql && (
                 <div className="card" style={{padding:18}}>
                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
                     <h3 style={{fontSize:13,fontWeight:800,textTransform:'uppercase',letterSpacing:'.06em'}}>SQL Généré</h3>
                     <div style={{display:'flex',gap:8}}>
                       <button className="btn-out" onClick={handleDownload} style={{fontSize:11,padding:'6px 12px'}}>⬇ .sql</button>
-                      <button className="btn-out" onClick={handleCopy} style={{fontSize:11,padding:'6px 12px',color:copied?'#16a34a':'inherit',borderColor:copied?'#a7f3d0':'inherit'}}>{copied ? '✓ Copié !' : '⎘ Copier'}</button>
+                      <button className="btn-out" onClick={handleCopy} style={{fontSize:11,padding:'6px 12px',color:copied?'#16a34a':'inherit',borderColor:copied?'#a7f3d0':'inherit'}}>
+                        {copied ? '✓ Copié !' : '⎘ Copier'}
+                      </button>
                     </div>
                   </div>
-                  <pre style={{background:'#1c1c1c',color:'#e2e8f0',borderRadius:8,padding:16,fontSize:11,fontFamily:'monospace',lineHeight:1.75,overflowX:'auto',maxHeight:480,overflowY:'auto',border:'1px solid #2e2e2e',whiteSpace:'pre'}}>{sql}</pre>
+                  <pre style={{background:'#1c1c1c',color:'#e2e8f0',borderRadius:8,padding:16,
+                    fontSize:11,fontFamily:'monospace',lineHeight:1.75,
+                    overflowX:'auto',maxHeight:480,overflowY:'auto',
+                    border:'1px solid #2e2e2e',whiteSpace:'pre'}}>{sql}</pre>
                 </div>
               )}
             </div>
           )}
+
           {activeTab === 'history' && (
             <div className="card" style={{padding:18}}>
               <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12,paddingBottom:8,borderBottom:'1px solid #e5e5e5'}}>
@@ -1764,15 +2049,25 @@ const SQLGeneratorPage = ({showToast}) => {
                 <h3 style={{fontSize:13,fontWeight:800,textTransform:'uppercase',letterSpacing:'.06em'}}>Historique des générations</h3>
               </div>
               {history.length === 0 ? (
-                <div style={{textAlign:'center',padding:40,color:'#9a9a9a'}}><div style={{fontSize:28,marginBottom:8}}>🕐</div><p style={{fontWeight:700}}>Aucun historique</p></div>
+                <div style={{textAlign:'center',padding:40,color:'#9a9a9a'}}>
+                  <div style={{fontSize:28,marginBottom:8}}>🕐</div>
+                  <p style={{fontWeight:700}}>Aucun historique</p>
+                  <p style={{fontSize:12,marginTop:4}}>Génère ton premier SQL pour le voir ici.</p>
+                </div>
               ) : history.map((h,i) => (
                 <div key={i} onClick={()=>loadFromHistory(h)}
-                  style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'11px 14px',borderRadius:8,border:'1px solid #e5e5e5',marginBottom:8,cursor:'pointer',transition:'border-color .15s,background .15s'}}
+                  style={{display:'flex',justifyContent:'space-between',alignItems:'center',
+                    padding:'11px 14px',borderRadius:8,border:'1px solid #e5e5e5',
+                    marginBottom:8,cursor:'pointer',transition:'border-color .15s,background .15s'}}
                   onMouseEnter={e=>{e.currentTarget.style.borderColor='#bbb';e.currentTarget.style.background='#fafafa';}}
-                  onMouseLeave={e=>{e.currentTarget.style.borderColor='#e5e5e5';e.currentTarget.style.background='';}}>
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor='#e5e5e5';e.currentTarget.style.background='';}}
+                >
                   <div>
                     <div style={{fontWeight:800,fontSize:14,marginBottom:2}}>{h.name}</div>
-                    <div style={{fontSize:11,color:'#9a9a9a'}}>{new Date(h.date).toLocaleString('fr-DZ')}<span style={{fontFamily:'monospace',marginLeft:8,fontSize:10}}>{h.uuid?.slice(0,13)}...</span></div>
+                    <div style={{fontSize:11,color:'#9a9a9a'}}>
+                      {new Date(h.date).toLocaleString('fr-DZ')}
+                      <span style={{fontFamily:'monospace',marginLeft:8,fontSize:10}}>{h.uuid?.slice(0,13)}...</span>
+                    </div>
                   </div>
                   <div style={{fontFamily:"'Barlow Condensed'",fontWeight:900,fontSize:28,color:'#d36135'}}>{h.count}</div>
                 </div>
@@ -1780,25 +2075,40 @@ const SQLGeneratorPage = ({showToast}) => {
             </div>
           )}
         </div>
+
+        {/* RIGHT: Info panel */}
         <div className="sqlgen-info" style={{position:'sticky',top:96,display:'flex',flexDirection:'column',gap:12}}>
           <div className="card" style={{padding:16}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.08em',color:'#9a9a9a',marginBottom:10}}>Règles de l'IA</div>
-            {[['white/gray','→ 2 lignes : Blanc + Gris'],['black/silver','→ 2 lignes : Noir + Argent'],['MT / AT','→ Manuelle / Automatique'],['FOB price','→ price_usd + price_fob'],['sunroof','→ sun_roof = TRUE'],['Trims différents','→ 1 ligne par trim']].map(([k,v]) => (
+            {[
+              ['white/gray', '→ 2 lignes : Blanc + Gris'],
+              ['black/silver', '→ 2 lignes : Noir + Argent'],
+              ['MT / AT', '→ Manuelle / Automatique'],
+              ['FOB price', '→ price_usd + price_fob'],
+              ['sunroof', '→ sun_roof = TRUE'],
+              ['Trims différents', '→ 1 ligne par trim'],
+            ].map(([k,v]) => (
               <div key={k} style={{display:'flex',gap:8,alignItems:'flex-start',marginBottom:7,fontSize:12}}>
                 <div style={{width:4,height:4,background:'#d36135',borderRadius:'50%',flexShrink:0,marginTop:5}}/>
                 <span><span style={{fontWeight:700,fontFamily:'monospace',fontSize:11}}>{k}</span> {v}</span>
               </div>
             ))}
           </div>
+
           <div className="card" style={{padding:16}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.08em',color:'#9a9a9a',marginBottom:10}}>Colonnes requises</div>
             <div style={{fontSize:12,color:'#555',marginBottom:8}}>Vérifie que ces colonnes existent dans Supabase avant d'exécuter :</div>
             <Tag>price_usd</Tag><Tag>price_fob</Tag><Tag>price_currency</Tag>
             <div style={{fontSize:11,color:'#9a9a9a',marginTop:8}}>Lance <code style={{fontSize:10}}>migration_fob.sql</code> si ce n'est pas fait.</div>
           </div>
+
           <div className="card" style={{padding:16}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.08em',color:'#9a9a9a',marginBottom:10}}>Marques supportées</div>
-            <div>{['Livan','MG','GAC','Geely','Kia','Roewe','Jetour','Renault','BYD','Chery','Haval','Changan','+ autres'].map(b=><Tag key={b}>{b}</Tag>)}</div>
+            <div>
+              {['Livan','MG','GAC','Geely','Kia','Roewe','Jetour','Renault','BYD','Chery','Haval','Changan','+ autres'].map(b=>(
+                <Tag key={b}>{b}</Tag>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -1806,16 +2116,61 @@ const SQLGeneratorPage = ({showToast}) => {
   );
 };
 
+
 // ═══════════════════════════════════════════════════════════════════════════
 // CATALOGUE PAGE
 // ═══════════════════════════════════════════════════════════════════════════
 const CATALOGUE_CSS = `
-  .cat-pg{background:#060D17;min-height:100vh;padding-top:87px;display:flex;flex-direction:row;}
-  .cat-panel{width:360px;min-width:360px;flex-shrink:0;background:linear-gradient(180deg,#0d1b2a,#0a1622);border-right:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;height:calc(100vh - 87px);position:sticky;top:87px;overflow:hidden;}
-  .cat-ptabs{display:flex;flex-shrink:0;background:rgba(0,0,0,0.25);border-bottom:1px solid rgba(255,255,255,0.08);}
-  .cat-ptab{flex:1;padding:13px 0;text-align:center;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.3);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;}
+  .cat-pg{
+    background:#060D17;
+    min-height:100vh;
+    padding-top:87px;
+    display:flex;
+    flex-direction:row;
+  }
+  .cat-panel{
+    width:360px;
+    min-width:360px;
+    flex-shrink:0;
+    background:linear-gradient(180deg,#0d1b2a,#0a1622);
+    border-right:1px solid rgba(255,255,255,0.06);
+    display:flex;
+    flex-direction:column;
+    height:calc(100vh - 87px);
+    position:sticky;
+    top:87px;
+    overflow:hidden;
+  }
+  .cat-ptabs{
+    display:flex;
+    flex-shrink:0;
+    background:rgba(0,0,0,0.25);
+    border-bottom:1px solid rgba(255,255,255,0.08);
+  }
+  .cat-ptab{
+    flex:1;
+    padding:13px 0;
+    text-align:center;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:rgba(255,255,255,0.3);
+    cursor:pointer;
+    border-bottom:2px solid transparent;
+    transition:all .2s;
+  }
   .cat-ptab.on{color:#E89A1C;border-bottom-color:#E89A1C;}
-  .cat-pbody{flex:1;overflow-y:auto;overflow-x:hidden;padding:16px 14px;display:flex;flex-direction:column;gap:14px;min-height:0;}
+  .cat-pbody{
+    flex:1;
+    overflow-y:auto;
+    overflow-x:hidden;
+    padding:16px 14px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    min-height:0;
+  }
   .cat-pbody::-webkit-scrollbar{width:3px;}
   .cat-pbody::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px;}
   .cat-tp{display:none;flex-direction:column;gap:14px;}
@@ -1826,7 +2181,20 @@ const CATALOGUE_CSS = `
   .cat-r3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
   .cat-fld{display:flex;flex-direction:column;gap:4px;}
   .cat-fld label{font-size:8px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:rgba(255,255,255,0.38);}
-  .cat-fld input,.cat-fld select,.cat-fld textarea{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:8px 11px;font-family:'Barlow',sans-serif;font-size:12px;font-weight:500;color:#fff;outline:none;transition:border-color .15s;resize:vertical;width:100%;}
+  .cat-fld input,.cat-fld select,.cat-fld textarea{
+    background:rgba(255,255,255,0.05);
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:8px;
+    padding:8px 11px;
+    font-family:'Barlow',sans-serif;
+    font-size:12px;
+    font-weight:500;
+    color:#fff;
+    outline:none;
+    transition:border-color .15s;
+    resize:vertical;
+    width:100%;
+  }
   .cat-fld input:focus,.cat-fld select:focus,.cat-fld textarea:focus{border-color:#E89A1C;background:rgba(232,154,28,0.04);}
   .cat-fld select option{background:#111e2e;}
   .cat-lz{border:2px dashed rgba(255,255,255,0.1);border-radius:10px;padding:10px 13px;display:flex;align-items:center;gap:12px;cursor:pointer;position:relative;transition:all .2s;background:rgba(255,255,255,0.02);}
@@ -1871,15 +2239,27 @@ const CATALOGUE_CSS = `
   .cat-save-row input::placeholder{color:rgba(255,255,255,0.2);}
   .cat-btn-save{background:rgba(232,154,28,0.15);border:1px solid rgba(232,154,28,0.35);color:#E89A1C;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .15s;}
   .cat-btn-save:hover{background:rgba(232,154,28,0.25);}
-  @media(max-width:900px){.cat-panel{display:none;}.cat-preview{padding:16px 8px 60px;}.cat-pg{padding-top:115px;}}
+  @media(max-width:900px){
+    .cat-panel{display:none;}
+    .cat-preview{padding:16px 8px 60px;}
+    .cat-pg{padding-top:115px;}
+  }
 `;
 
+/* ── SVG icons ── */
+const CI = {
+  gear:`<svg viewBox="0 0 24 24" fill="none" width="26" height="26"><circle cx="12" cy="12" r="9" stroke="white" stroke-width="1.4"/><circle cx="12" cy="12" r="3.5" stroke="white" stroke-width="1.2"/><line x1="12" y1="3" x2="12" y2="8.5" stroke="white" stroke-width="1.2"/><line x1="4.4" y1="16.5" x2="8.8" y2="14" stroke="white" stroke-width="1.2"/><line x1="19.6" y1="16.5" x2="15.2" y2="14" stroke="white" stroke-width="1.2"/></svg>`,
+  fuel:`<svg viewBox="0 0 24 24" fill="none" width="26" height="26"><path d="M5 20V7C5 6 6 5 7 5H15C16 5 17 6 17 7V12L20 15V20H5Z" stroke="white" stroke-width="1.4"/><line x1="8" y1="9" x2="14" y2="9" stroke="white" stroke-width="1.2"/><line x1="8" y1="12" x2="14" y2="12" stroke="white" stroke-width="1.2"/></svg>`,
+  eng:`<svg viewBox="0 0 24 24" fill="none" width="26" height="26"><rect x="3" y="7" width="14" height="10" rx="2" stroke="white" stroke-width="1.4"/><path d="M17 10H21V14H17" stroke="white" stroke-width="1.2"/><path d="M7 7V4H10V7" stroke="white" stroke-width="1.2"/><line x1="3" y1="10" x2="1" y2="10" stroke="white" stroke-width="1.2" stroke-linecap="round"/><line x1="3" y1="14" x2="1" y2="14" stroke="white" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+  spd:`<svg viewBox="0 0 24 24" fill="none" width="26" height="26"><circle cx="12" cy="12" r="9" stroke="white" stroke-width="1.4"/><path d="M6.5 17C6.5 17 8.5 12 12 12C15.5 12 17.5 17 17.5 17" stroke="white" stroke-width="1.2" fill="none"/><line x1="12" y1="3" x2="12" y2="5.5" stroke="white" stroke-width="1.2" stroke-linecap="round"/><line x1="12" y1="12" x2="9.8" y2="8.5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+};
+
+// EQUIPS is derived from EQUIPMENT_LABELS so keys always match DB
 const EQUIPS = Object.entries(EQUIPMENT_LABELS).map(([k,v]) => ({key:k, label:v}));
 const SWATCH_COLORS = ['#ffffff','#1a1a1a','#888888','#C0C0C0','#1a3a7a','#8B0000','#2d6a1a','#8B4513'];
 
 const CataloguePage = ({initialCar=null, settings=null}) => {
   const [tab, setTab] = useState(0);
-  const [activeThumb, setActiveThumb] = useState('front');
 
   const fmtNum = n => n ? String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,' ') : '';
 
@@ -1887,22 +2267,37 @@ const CataloguePage = ({initialCar=null, settings=null}) => {
     if (!car) return {make:'',model:'',year:'',body:'',cond:'',price:'',status:'',phone:'0795505722',fb:'EL Warcha Auto',ig:'el.warcha.auto',desc:'',engine:'',power:'',fuel:'',gear:'',drive:'',km:'',doors:'',seats:'',colorname:''};
     const fob = parseFloat(car.price_fob)||0;
     const dzd = calcDZD(car.price_cny, settings, fob||car.price_usd, 'USD');
+    // Show DZD if available, otherwise FOB in USD
     let priceStr = '';
-    if (dzd && dzd > 0) { priceStr = fmtNum(dzd) + ' DA'; }
-    else if (fob > 0) { priceStr = '$ ' + fmtNum(fob) + ' FOB'; }
+    if (dzd && dzd > 0) {
+      priceStr = fmtNum(dzd) + ' DA';
+    } else if (fob > 0) {
+      priceStr = '$ ' + fmtNum(fob) + ' FOB';
+    }
     return {
-      make: car.brand||'', model: car.model||'', year: car.year ? String(car.year) : '',
-      body: car.body_type||'', cond: car.condition==='new'?'Neuf':car.condition==='used'?'Occasion':'',
-      price: priceStr, status: car.status==='available'?'En stock':car.status==='reserved'?'Sur commande':car.status==='sold'?'Vendu':'',
+      make:  car.brand||'',
+      model: car.model||'',
+      year:  car.year ? String(car.year) : '',
+      body:  car.body_type||'',
+      cond:  car.condition==='new'?'Neuf':car.condition==='used'?'Occasion':'',
+      price: priceStr,
+      status: car.status==='available'?'En stock':car.status==='reserved'?'Sur commande':car.status==='sold'?'Vendu':'',
       phone: '0795505722', fb:'EL Warcha Auto', ig:'el.warcha.auto',
-      desc: car.description||'', engine: car.engine_size||'', power: '',
-      fuel: car.fuel_type||'', gear: car.transmission||'', drive: '',
-      km: car.mileage ? String(car.mileage)+' km' : '0 km',
-      doors: car.doors ? String(car.doors) : '', seats: '', colorname: car.color||'',
+      desc:  car.description||'',
+      engine:car.engine_size||'',
+      power: '',
+      fuel:  car.fuel_type||'',
+      gear:  car.transmission||'',
+      drive: '',
+      km:    car.mileage ? String(car.mileage)+' km' : '0 km',
+      doors: car.doors ? String(car.doors) : '',
+      seats: '',
+      colorname: car.color||'',
     };
   };
   const carToEquips = (car) => {
     const eq = car?.car_equipment?.[0]||{};
+    // Use DB keys directly — same as EQUIPMENT_LABELS
     return new Set(Object.keys(EQUIPMENT_LABELS).filter(k => eq[k]));
   };
   const carToColors = (car) => {
@@ -1910,6 +2305,7 @@ const CataloguePage = ({initialCar=null, settings=null}) => {
     const c = car?.color;
     return new Set(c && hexMap[c] ? [hexMap[c]] : ['#ffffff']);
   };
+
   const carToImgs = (car) => {
     if (!car) return {};
     const photos = car.photos||[];
@@ -1925,20 +2321,23 @@ const CataloguePage = ({initialCar=null, settings=null}) => {
   const [equips, setEquips] = useState(()=>carToEquips(initialCar));
   const [colors, setColors] = useState(()=>carToColors(initialCar));
   const [generated, setGenerated] = useState(!!initialCar);
-  const [exporting, setExporting] = useState(false);
-  const [templates, setTemplates] = useState([]);
-  const [saveName, setSaveName] = useState('');
-  const [showTemplates, setShowTemplates] = useState(false);
-  const [savingTpl, setSavingTpl] = useState(false);
-  const [currentTplId, setCurrentTplId] = useState(null);
+  const [exporting,      setExporting]      = useState(false);
+  const [templates,      setTemplates]      = useState([]);
+  const [saveName,       setSaveName]       = useState('');
+  const [showTemplates,  setShowTemplates]  = useState(false);
+  const [savingTpl,      setSavingTpl]      = useState(false);
+  const [currentTplId,   setCurrentTplId]   = useState(null);
 
+  // Auto-update saveName when make/model changes
   React.useEffect(() => {
     const name = (form.make + ' ' + form.model).trim();
     if (name) setSaveName(name);
   }, [form.make, form.model]);
 
   React.useEffect(() => {
-    getCatalogueTemplates().then(setTemplates).catch(e => console.error('Failed to load templates', e));
+    getCatalogueTemplates()
+      .then(setTemplates)
+      .catch(e => console.error('Failed to load templates', e));
   }, []);
 
   const saveTemplate = async () => {
@@ -1949,65 +2348,109 @@ const CataloguePage = ({initialCar=null, settings=null}) => {
       const uploadedImgs = { ...imgs };
       for (const [slot, val] of Object.entries(imgs)) {
         if (val && val.startsWith('data:')) {
-          try { const res=await fetch(val); const blob=await res.blob(); const file=new File([blob],`${slot}.jpg`,{type:blob.type}); uploadedImgs[slot]=await uploadCatalogueAsset(tplId,slot,file); } catch(_) {}
+          try {
+            const res  = await fetch(val);
+            const blob = await res.blob();
+            const file = new File([blob], `${slot}.jpg`, { type: blob.type });
+            uploadedImgs[slot] = await uploadCatalogueAsset(tplId, slot, file);
+          } catch(_) {}
         }
       }
       let savedLogo = logoB64;
       if (logoB64 && logoB64.startsWith('data:')) {
-        try { const res=await fetch(logoB64); const blob=await res.blob(); const file=new File([blob],'logo.png',{type:blob.type}); savedLogo=await uploadCatalogueAsset(tplId,'logo',file); } catch(_) {}
+        try {
+          const res  = await fetch(logoB64);
+          const blob = await res.blob();
+          const file = new File([blob], 'logo.png', { type: blob.type });
+          savedLogo  = await uploadCatalogueAsset(tplId, 'logo', file);
+        } catch(_) {}
       }
       const payload = {
-        id: currentTplId||undefined, name, form_data: form, equips: [...equips], colors: [...colors],
-        logo_url: savedLogo,
-        photo_front:  uploadedImgs.front      ||null, photo_rear:   uploadedImgs.rear       ||null,
-        photo_side_r: uploadedImgs['side-r']  ||null, photo_side_l: uploadedImgs['side-l']  ||null,
-        photo_int1:   uploadedImgs.int1       ||null, photo_int2:   uploadedImgs.int2        ||null,
+        id:           currentTplId || undefined,
+        name,
+        form_data:    form,
+        equips:       [...equips],
+        colors:       [...colors],
+        logo_url:     savedLogo,
+        photo_front:  uploadedImgs.front       || null,
+        photo_rear:   uploadedImgs.rear        || null,
+        photo_side_r: uploadedImgs['side-r']   || null,
+        photo_side_l: uploadedImgs['side-l']   || null,
+        photo_int1:   uploadedImgs.int1        || null,
+        photo_int2:   uploadedImgs.int2        || null,
       };
       const saved = await saveCatalogueTemplate(payload);
       setCurrentTplId(saved.id);
-      setTemplates(prev => { const idx=prev.findIndex(t=>t.id===saved.id); return idx>=0?prev.map(t=>t.id===saved.id?saved:t):[saved,...prev]; });
-      setSaveName(''); setShowTemplates(true);
+      setTemplates(prev => {
+        const idx = prev.findIndex(t => t.id === saved.id);
+        return idx >= 0 ? prev.map(t => t.id === saved.id ? saved : t) : [saved, ...prev];
+      });
+      setSaveName('');
+      setShowTemplates(true);
     } catch(e) { console.error('Save failed', e); }
     finally { setSavingTpl(false); }
   };
 
   const loadTemplate = (tpl) => {
-    setForm(tpl.form_data||{});
-    setEquips(new Set(tpl.equips||[]));
-    setColors(new Set(tpl.colors?.length?tpl.colors:['#ffffff']));
-    setLogoB64(tpl.logo_url||null);
+    setForm(tpl.form_data || {});
+    setEquips(new Set(tpl.equips || []));
+    setColors(new Set(tpl.colors?.length ? tpl.colors : ['#ffffff']));
+    setLogoB64(tpl.logo_url || null);
     setImgs({
-      ...(tpl.photo_front  ?{front:   tpl.photo_front }:{}),
-      ...(tpl.photo_rear   ?{rear:    tpl.photo_rear  }:{}),
-      ...(tpl.photo_side_r ?{'side-r':tpl.photo_side_r}:{}),
-      ...(tpl.photo_side_l ?{'side-l':tpl.photo_side_l}:{}),
-      ...(tpl.photo_int1   ?{int1:    tpl.photo_int1  }:{}),
-      ...(tpl.photo_int2   ?{int2:    tpl.photo_int2  }:{}),
+      ...(tpl.photo_front  ? { front:    tpl.photo_front  } : {}),
+      ...(tpl.photo_rear   ? { rear:     tpl.photo_rear   } : {}),
+      ...(tpl.photo_side_r ? {'side-r':  tpl.photo_side_r } : {}),
+      ...(tpl.photo_side_l ? {'side-l':  tpl.photo_side_l } : {}),
+      ...(tpl.photo_int1   ? { int1:     tpl.photo_int1   } : {}),
+      ...(tpl.photo_int2   ? { int2:     tpl.photo_int2   } : {}),
     });
-    setSaveName(tpl.name); setCurrentTplId(tpl.id); setGenerated(true); setShowTemplates(false);
+    setSaveName(tpl.name);
+    setCurrentTplId(tpl.id);
+    setGenerated(true);
+    setShowTemplates(false);
   };
 
   const deleteTemplate = async (id, e) => {
     e.stopPropagation();
-    try { await deleteCatalogueTemplate(id); setTemplates(prev=>prev.filter(t=>t.id!==id)); if (currentTplId===id) setCurrentTplId(null); }
-    catch(e) { console.error('Delete failed', e); }
-  };
-
+    try {
+      await deleteCatalogueTemplate(id);
+      setTemplates(prev => prev.filter(t => t.id !== id));
+      if (currentTplId === id) setCurrentTplId(null);
+    } catch(e) { console.error('Delete failed', e); }
+  };;
   const catRef = React.useRef(null);
   const outerRef = React.useRef(null);
   const previewRef = React.useRef(null);
+
   const sf = k => e => setForm(f => ({...f, [k]: e.target.value}));
 
   const handleLogo = e => {
     const file = e.target.files[0]; if (!file) return;
-    const r = new FileReader(); r.onload = ev => setLogoB64(ev.target.result); r.readAsDataURL(file); e.target.value='';
+    const r = new FileReader();
+    r.onload = ev => setLogoB64(ev.target.result);
+    r.readAsDataURL(file);
+    e.target.value = ''; // reset so same file can be re-selected
   };
+
   const handleImg = (key, e) => {
     const file = e.target.files[0]; if (!file) return;
-    const r = new FileReader(); r.onload = ev => setImgs(prev=>({...prev,[key]:ev.target.result})); r.readAsDataURL(file); e.target.value='';
+    const r = new FileReader();
+    r.onload = ev => setImgs(prev => ({...prev, [key]: ev.target.result}));
+    r.readAsDataURL(file);
+    e.target.value = ''; // reset so same file can be re-selected
   };
-  const toggleEquip = eq => setEquips(prev => { const n=new Set(prev); n.has(eq)?n.delete(eq):n.add(eq); return n; });
-  const toggleColor = c => setColors(prev => { const n=new Set(prev); n.has(c)?n.delete(c):n.add(c); return n; });
+
+  const toggleEquip = eq => setEquips(prev => {
+    const n = new Set(prev);
+    n.has(eq) ? n.delete(eq) : n.add(eq);
+    return n;
+  });
+
+  const toggleColor = c => setColors(prev => {
+    const n = new Set(prev);
+    n.has(c) ? n.delete(c) : n.add(c);
+    return n;
+  });
 
   React.useEffect(() => {
     if (!outerRef.current || !previewRef.current || !generated) return;
@@ -2017,15 +2460,17 @@ const CataloguePage = ({initialCar=null, settings=null}) => {
       outerRef.current.style.transform = `scale(${s})`;
       outerRef.current.style.height = (catRef.current.offsetHeight * s) + 'px';
     };
-    scale(); window.addEventListener('resize', scale); return () => window.removeEventListener('resize', scale);
+    scale();
+    window.addEventListener('resize', scale);
+    return () => window.removeEventListener('resize', scale);
   }, [generated]);
 
   const stripItems = [
-    form.price && {lbl:'Prix', val: form.price, gold: true},
-    form.gear  && {lbl:'Boîte', val: form.gear},
-    form.fuel  && {lbl:'Carburant', val: form.fuel},
-    form.engine&& {lbl:'Moteur', val: form.engine},
-    form.km    && {lbl:'Kilométrage', val: form.km},
+    form.price && {icon: CI.gear, lbl:'Prix', val: form.price, gold: true},
+    form.gear  && {icon: CI.gear, lbl:'Boîte', val: form.gear},
+    form.fuel  && {icon: CI.fuel, lbl:'Carburant', val: form.fuel},
+    form.engine&& {icon: CI.eng,  lbl:'Moteur', val: form.engine},
+    form.km    && {icon: CI.spd,  lbl:'Kilométrage', val: form.km},
   ].filter(Boolean);
 
   const specRows = [
@@ -2037,111 +2482,90 @@ const CataloguePage = ({initialCar=null, settings=null}) => {
     ['Places', form.seats], ['Traction', form.drive], ['Condition', form.cond],
   ].filter(r => r[1]);
 
-  const exportPDF = () => {
+  const galKeys = Object.keys(imgs).filter(k => imgs[k]);
+
+  const exportPDF = async () => {
     if (!catRef.current) return;
     setExporting(true);
-
-    const el  = catRef.current;
-    const W   = 860;
-    const H   = el.scrollHeight;
-
-    const html   = el.outerHTML;
-    const styles = Array.from(document.querySelectorAll('style,link[rel="stylesheet"]'))
-      .map(s => s.outerHTML).join('\n');
-
-    const printWin = window.open('', '_blank', 'width=900,height=700');
-    if (!printWin) { setExporting(false); return; }
-
-    // Convert px to mm (96dpi → 1px = 0.2646mm)
-    const mmW = (W * 0.2646).toFixed(1);
-    const mmH = (H * 0.2646).toFixed(1);
-
-    printWin.document.write(`<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=${W}"/>
-  <title>Catalogue — ${form.make || ''} ${form.model || ''}</title>
-  ${styles}
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@600;700;800;900&display=swap"/>
-  <style>
-    *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; color-adjust:exact !important; }
-
-    /* Screen preview — center the card */
-    html, body {
-      width: ${W}px;
-      background: #080d14 !important;
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-      color-adjust: exact !important;
-      font-family: 'Barlow', sans-serif;
-    }
-      /* Force all backgrounds to render */
-div, section, header, footer, span, td, th, table {
-  -webkit-print-color-adjust: exact !important;
-  print-color-adjust: exact !important;
-  color-adjust: exact !important;
-}
-    body {
-      padding: 0;
-      margin: 0;
-    }
-    .cat-wrap {
-      width: ${W}px;
-    }
-
-    /* Print — page exactly the size of the card, no margins, full fidelity */
-    @page {
-      size: ${mmW}mm ${mmH}mm;
-      margin: 0;
-    }
-    @media print {
-  html, body {
-    width: ${W}px !important;
-    height: ${H}px !important;
-    overflow: hidden !important;
-    background: #080d14 !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    color-adjust: exact !important;
-  }
-  * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    color-adjust: exact !important;
-  }
-      .cat-wrap {
-        width: ${W}px !important;
-        transform-origin: top left;
+    try {
+      // Load libs if needed
+      if (!window.html2canvas) {
+        await new Promise((res, rej) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+          s.onload = res; s.onerror = rej;
+          document.head.appendChild(s);
+        });
       }
-      /* hide everything except the catalogue card */
-      body > * { display: none !important; }
-      body > .cat-wrap { display: block !important; }
-    }
-  </style>
-</head>
-<body>
-  <div class="cat-wrap">${html}</div>
-</body>
-</html>`);
+      if (!window.jspdf) {
+        await new Promise((res, rej) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+          s.onload = res; s.onerror = rej;
+          document.head.appendChild(s);
+        });
+      }
 
-    printWin.document.close();
+      // Clone the catalogue node into a fresh container directly on body
+      // This removes ALL transform/overflow/clipping from parent containers
+      const clone = catRef.current.cloneNode(true);
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = [
+        'position:fixed',
+        'top:0',
+        'left:-9999px',   // off-screen but fully rendered — NOT hidden
+        'width:860px',
+        'z-index:-9999',
+        'pointer-events:none',
+        'background:#0A1520',
+        'overflow:visible',
+      ].join(';');
+      wrapper.appendChild(clone);
+      document.body.appendChild(wrapper);
 
-    const doPrint = () => {
-      printWin.focus();
-      printWin.print();
-      setTimeout(() => { try { printWin.close(); } catch(_){} }, 2000);
-      setExporting(false);
-    };
+      // Wait for layout to fully settle
+      await new Promise(r => setTimeout(r, 400));
 
-    if (printWin.document.readyState === 'complete') {
-      setTimeout(doPrint, 900);
-    } else {
-      printWin.onload = () => setTimeout(doPrint, 900);
-      setTimeout(doPrint, 2500);
-    }
+      const naturalH = clone.scrollHeight;
+
+      const canvas = await window.html2canvas(clone, {
+        scale: 3,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#0A1520',
+        logging: false,
+        width: 860,
+        height: naturalH,
+        windowWidth: 860,
+        windowHeight: naturalH,
+        x: 0,
+        y: 0,
+      });
+
+      // Remove clone
+      document.body.removeChild(wrapper);
+
+      const { jsPDF } = window.jspdf;
+      const imgData = canvas.toDataURL('image/png');
+      // Use exact pixel ratio for PDF page size — no squishing
+      const pxW = canvas.width;
+      const pxH = canvas.height;
+      const mmW = 210;
+      const mmH = parseFloat(((pxH / pxW) * mmW).toFixed(2));
+      const pdf = new jsPDF({
+        orientation: mmH > mmW ? 'portrait' : 'landscape',
+        unit: 'mm',
+        format: [mmW, mmH],
+        compress: true,
+      });
+      pdf.addImage(imgData, 'PNG', 0, 0, mmW, mmH, undefined, 'FAST');
+      const name = `elwarcha_${(form.make||'catalogue').toLowerCase()}_${(form.model||'').toLowerCase()}_${form.year}`
+        .replace(/\s+/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'') + '.pdf';
+      pdf.save(name);
+
+    } catch(e) { console.error('PDF export error:', e); }
+    finally { setExporting(false); }
   };
-
 
   const IMG_SLOTS = [
     {key:'front',lbl:'Avant ★'},{key:'rear',lbl:'Arrière ◆'},
@@ -2161,7 +2585,10 @@ div, section, header, footer, span, td, th, table {
               <div key={i} className={"cat-ptab"+(tab===i?" on":"")} onClick={()=>setTab(i)}>{t}</div>
             ))}
           </div>
+
           <div className="cat-pbody">
+
+            {/* TAB 0 – Infos */}
             {tab===0&&<div className="cat-tp on">
               <div>
                 <div className="cat-sh">Logo</div>
@@ -2169,14 +2596,24 @@ div, section, header, footer, span, td, th, table {
                   <div className="cat-lz">
                     <input type="file" accept="image/*" onChange={handleLogo}/>
                     <div className="cat-lzprev">
-                      {logoB64?<img src={logoB64} style={{width:'100%',height:'100%',objectFit:'contain'}}/>:<span style={{fontSize:11,color:'rgba(255,255,255,0.2)'}}>Logo</span>}
+                      {logoB64
+                        ? <img src={logoB64} style={{width:'100%',height:'100%',objectFit:'contain'}}/>
+                        : <span style={{fontSize:11,color:'rgba(255,255,255,0.2)'}}>Logo</span>}
                     </div>
                     <div style={{flex:1}}>
-                      <div style={{fontSize:12,fontWeight:700,color:'#fff',marginBottom:2}}>{logoB64?'Logo chargé — cliquer pour changer':'Uploader votre logo'}</div>
+                      <div style={{fontSize:12,fontWeight:700,color:'#fff',marginBottom:2}}>
+                        {logoB64 ? 'Logo chargé — cliquer pour changer' : 'Uploader votre logo'}
+                      </div>
                       <div style={{fontSize:10,color:'rgba(255,255,255,0.35)'}}>PNG transparent recommandé</div>
                     </div>
                   </div>
-                  {logoB64&&<button onClick={e=>{e.stopPropagation();setLogoB64(null);}} style={{position:'absolute',top:-6,right:-6,background:'#dc2626',border:'none',borderRadius:'50%',width:20,height:20,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'#fff',fontSize:11,zIndex:10,flexShrink:0}} title="Supprimer le logo">✕</button>}
+                  {logoB64&&(
+                    <button
+                      onClick={e=>{e.stopPropagation();setLogoB64(null);}}
+                      style={{position:'absolute',top:-6,right:-6,background:'#dc2626',border:'none',borderRadius:'50%',width:20,height:20,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'#fff',fontSize:11,zIndex:10,flexShrink:0}}
+                      title="Supprimer le logo"
+                    >✕</button>
+                  )}
                 </div>
               </div>
               <div>
@@ -2188,10 +2625,16 @@ div, section, header, footer, span, td, th, table {
                 <div className="cat-r3" style={{marginTop:8}}>
                   <div className="cat-fld"><label>Année</label><input type="number" value={form.year} onChange={sf('year')} placeholder="2025"/></div>
                   <div className="cat-fld"><label>Carrosserie</label>
-                    <select value={form.body} onChange={sf('body')}><option value="">—</option>{['Berline','SUV','Crossover','Coupé','Break','Pick-Up','Cabriolet'].map(v=><option key={v}>{v}</option>)}</select>
+                    <select value={form.body} onChange={sf('body')}>
+                      <option value="">—</option>
+                      {['Berline','SUV','Crossover','Coupé','Break','Pick-Up','Cabriolet'].map(v=><option key={v}>{v}</option>)}
+                    </select>
                   </div>
                   <div className="cat-fld"><label>Condition</label>
-                    <select value={form.cond} onChange={sf('cond')}><option value="">—</option>{['Neuf','Occasion','Semi-Neuf'].map(v=><option key={v}>{v}</option>)}</select>
+                    <select value={form.cond} onChange={sf('cond')}>
+                      <option value="">—</option>
+                      {['Neuf','Occasion','Semi-Neuf'].map(v=><option key={v}>{v}</option>)}
+                    </select>
                   </div>
                 </div>
               </div>
@@ -2200,7 +2643,10 @@ div, section, header, footer, span, td, th, table {
                 <div className="cat-r2">
                   <div className="cat-fld"><label>Prix</label><input value={form.price} onChange={sf('price')} placeholder="292 M DA"/></div>
                   <div className="cat-fld"><label>Statut</label>
-                    <select value={form.status} onChange={sf('status')}><option value="">—</option>{['واصلة','En stock','Sur commande','Vendu'].map(v=><option key={v}>{v}</option>)}</select>
+                    <select value={form.status} onChange={sf('status')}>
+                      <option value="">—</option>
+                      {['واصلة','En stock','Sur commande','Vendu'].map(v=><option key={v}>{v}</option>)}
+                    </select>
                   </div>
                 </div>
                 <div className="cat-r3" style={{marginTop:8}}>
@@ -2215,6 +2661,7 @@ div, section, header, footer, span, td, th, table {
               </div>
             </div>}
 
+            {/* TAB 1 – Specs */}
             {tab===1&&<div className="cat-tp on">
               <div>
                 <div className="cat-sh">Motorisation</div>
@@ -2224,15 +2671,24 @@ div, section, header, footer, span, td, th, table {
                 </div>
                 <div className="cat-r2" style={{marginTop:8}}>
                   <div className="cat-fld"><label>Carburant</label>
-                    <select value={form.fuel} onChange={sf('fuel')}><option value="">—</option>{['Essence','Diesel','Hybride','Électrique','GPL'].map(v=><option key={v}>{v}</option>)}</select>
+                    <select value={form.fuel} onChange={sf('fuel')}>
+                      <option value="">—</option>
+                      {['Essence','Diesel','Hybride','Électrique','GPL'].map(v=><option key={v}>{v}</option>)}
+                    </select>
                   </div>
                   <div className="cat-fld"><label>Boîte</label>
-                    <select value={form.gear} onChange={sf('gear')}><option value="">—</option>{['Automatique','Manuelle','CVT','Semi-auto'].map(v=><option key={v}>{v}</option>)}</select>
+                    <select value={form.gear} onChange={sf('gear')}>
+                      <option value="">—</option>
+                      {['Automatique','Manuelle','CVT','Semi-auto'].map(v=><option key={v}>{v}</option>)}
+                    </select>
                   </div>
                 </div>
                 <div className="cat-r2" style={{marginTop:8}}>
                   <div className="cat-fld"><label>Traction</label>
-                    <select value={form.drive} onChange={sf('drive')}><option value="">—</option>{['FWD','RWD','AWD','4WD'].map(v=><option key={v}>{v}</option>)}</select>
+                    <select value={form.drive} onChange={sf('drive')}>
+                      <option value="">—</option>
+                      {['FWD','RWD','AWD','4WD'].map(v=><option key={v}>{v}</option>)}
+                    </select>
                   </div>
                   <div className="cat-fld"><label>Kilométrage</label><input value={form.km} onChange={sf('km')} placeholder="0 km"/></div>
                 </div>
@@ -2241,10 +2697,16 @@ div, section, header, footer, span, td, th, table {
                 <div className="cat-sh">Dimensions</div>
                 <div className="cat-r3">
                   <div className="cat-fld"><label>Portes</label>
-                    <select value={form.doors} onChange={sf('doors')}><option value="">—</option>{['2','3','4','5'].map(v=><option key={v}>{v}</option>)}</select>
+                    <select value={form.doors} onChange={sf('doors')}>
+                      <option value="">—</option>
+                      {['2','3','4','5'].map(v=><option key={v}>{v}</option>)}
+                    </select>
                   </div>
                   <div className="cat-fld"><label>Places</label>
-                    <select value={form.seats} onChange={sf('seats')}><option value="">—</option>{['2','4','5','7','8'].map(v=><option key={v}>{v}</option>)}</select>
+                    <select value={form.seats} onChange={sf('seats')}>
+                      <option value="">—</option>
+                      {['2','4','5','7','8'].map(v=><option key={v}>{v}</option>)}
+                    </select>
                   </div>
                   <div className="cat-fld"><label>Couleur(s)</label><input value={form.colorname} onChange={sf('colorname')} placeholder="Blanc, Gris"/></div>
                 </div>
@@ -2260,6 +2722,7 @@ div, section, header, footer, span, td, th, table {
               </div>
             </div>}
 
+            {/* TAB 2 – Équipements */}
             {tab===2&&<div className="cat-tp on">
               <div>
                 <div className="cat-sh">Sélectionner les équipements</div>
@@ -2271,6 +2734,7 @@ div, section, header, footer, span, td, th, table {
               </div>
             </div>}
 
+            {/* TAB 3 – Photos */}
             {tab===3&&<div className="cat-tp on">
               <div>
                 <div className="cat-sh">Photos du véhicule</div>
@@ -2279,41 +2743,65 @@ div, section, header, footer, span, td, th, table {
                     <div key={key} className="cat-isl">
                       <input type="file" accept="image/*" onChange={e=>handleImg(key,e)}/>
                       {imgs[key]
-                        ?<><img className="pv" src={imgs[key]} alt={lbl}/>
-                          <div style={{position:'absolute',bottom:0,left:0,right:0,background:'rgba(0,0,0,0.55)',fontSize:7,fontWeight:700,letterSpacing:1,textTransform:'uppercase',color:'rgba(255,255,255,0.7)',padding:'3px 5px',textAlign:'center',zIndex:3}}>Cliquer pour remplacer</div>
-                          <button className="cat-isl-del" onClick={e=>{e.stopPropagation();e.preventDefault();setImgs(prev=>{const n={...prev};delete n[key];return n;});}} title="Supprimer">✕</button>
-                        </>
-                        :<><svg width="18" height="18" fill="none" viewBox="0 0 24 24" style={{opacity:.2}}><rect x="3" y="5" width="18" height="14" rx="2" stroke="white" strokeWidth="1.5"/><circle cx="12" cy="12" r="4" stroke="white" strokeWidth="1.5"/></svg><div className="ilbl">{lbl}</div></>
-                      }
+                        ? <>
+                            <img className="pv" src={imgs[key]} alt={lbl}/>
+                            <div style={{position:'absolute',bottom:0,left:0,right:0,background:'rgba(0,0,0,0.55)',fontSize:7,fontWeight:700,letterSpacing:1,textTransform:'uppercase',color:'rgba(255,255,255,0.7)',padding:'3px 5px',textAlign:'center',zIndex:3}}>Cliquer pour remplacer</div>
+                            <button
+                              className="cat-isl-del"
+                              onClick={e=>{e.stopPropagation();e.preventDefault();setImgs(prev=>{const n={...prev};delete n[key];return n;});}}
+                              title="Supprimer"
+                            >✕</button>
+                          </>
+                        : <>
+                            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" style={{opacity:.2}}><rect x="3" y="5" width="18" height="14" rx="2" stroke="white" strokeWidth="1.5"/><circle cx="12" cy="12" r="4" stroke="white" strokeWidth="1.5"/></svg>
+                            <div className="ilbl">{lbl}</div>
+                          </>}
                     </div>
                   ))}
                 </div>
                 <p style={{fontSize:'8px',color:'rgba(255,255,255,0.2)',marginTop:8,textAlign:'center',lineHeight:1.6}}>★ Avant = image principale · ◆ Arrière = miniature</p>
               </div>
             </div>}
+
           </div>
 
-          {/* TEMPLATE MANAGER */}
+          {/* Action buttons */}
+          {/* ── TEMPLATE MANAGER ── */}
           <div className="cat-tpl-section">
+            {/* Save row */}
             <div style={{padding:'10px 14px 8px'}}>
               <div style={{fontSize:9,fontWeight:700,letterSpacing:2,textTransform:'uppercase',color:'rgba(255,255,255,0.25)',marginBottom:6}}>{currentTplId?'Mettre à jour le modèle':'Sauvegarder le modèle'}</div>
               <div className="cat-save-row">
-                <input value={saveName} onChange={e=>setSaveName(e.target.value)} placeholder="Nom du modèle..." onKeyDown={e=>e.key==='Enter'&&saveTemplate()}/>
+                <input
+                  value={saveName}
+                  onChange={e=>setSaveName(e.target.value)}
+                  placeholder="Nom du modèle..."
+                  onKeyDown={e=>e.key==='Enter'&&saveTemplate()}
+                />
                 <button className="cat-btn-save" onClick={saveTemplate} disabled={savingTpl}>{savingTpl?'⏳':'💾'} Sauv.</button>
               </div>
             </div>
-            <div onClick={()=>setShowTemplates(v=>!v)} style={{padding:'7px 14px',display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',borderTop:'1px solid rgba(255,255,255,0.05)'}}>
-              <span style={{fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:'uppercase',color:templates.length>0?'rgba(232,154,28,0.8)':'rgba(255,255,255,0.2)'}}>📂 Modèles sauvegardés ({templates.length})</span>
+            {/* Toggle templates list */}
+            <div
+              onClick={()=>setShowTemplates(v=>!v)}
+              style={{padding:'7px 14px',display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',borderTop:'1px solid rgba(255,255,255,0.05)'}}
+            >
+              <span style={{fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:'uppercase',color:templates.length>0?'rgba(232,154,28,0.8)':'rgba(255,255,255,0.2)'}}>
+                📂 Modèles sauvegardés ({templates.length})
+              </span>
               <span style={{fontSize:10,color:'rgba(255,255,255,0.25)'}}>{showTemplates?'▲':'▼'}</span>
             </div>
             {showTemplates&&(
               <div style={{maxHeight:150,overflowY:'auto',padding:'0 10px 10px',display:'flex',flexDirection:'column',gap:5}}>
                 {templates.length===0
-                  ?<div className="cat-tpl-empty">Aucun modèle sauvegardé</div>
-                  :templates.map(tpl=>(
+                  ? <div className="cat-tpl-empty">Aucun modèle sauvegardé</div>
+                  : templates.map(tpl=>(
                     <div key={tpl.key} className="cat-tpl-row" onClick={()=>loadTemplate(tpl)}>
                       <div style={{flexShrink:0,width:28,height:28,borderRadius:6,background:'rgba(232,154,28,0.12)',border:'1px solid rgba(232,154,28,0.2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13}}>🎨</div>
-                      <div style={{flex:1,minWidth:0}}><div className="cat-tpl-name">{tpl.name}</div><div className="cat-tpl-date">{new Date(tpl.savedAt).toLocaleDateString('fr-DZ')}</div></div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div className="cat-tpl-name">{tpl.name}</div>
+                        <div className="cat-tpl-date">{new Date(tpl.savedAt).toLocaleDateString('fr-DZ')}</div>
+                      </div>
                       <button className="cat-tpl-del" onClick={e=>deleteTemplate(tpl.id,e)} title="Supprimer">✕</button>
                     </div>
                   ))
@@ -2322,10 +2810,16 @@ div, section, header, footer, span, td, th, table {
             )}
           </div>
 
-          {/* MAIN ACTIONS */}
+          {/* ── MAIN ACTIONS ── */}
           <div className="cat-actions">
-            <button className="cat-btn cat-btn-gold" onClick={()=>setGenerated(true)}>✦ Générer le catalogue</button>
-            {generated&&<button className="cat-btn cat-btn-out" onClick={exportPDF} disabled={exporting}>{exporting?'⏳':'🖨️'} Imprimer</button>}
+            <button className="cat-btn cat-btn-gold" onClick={()=>setGenerated(true)}>
+              ✦ Générer le catalogue
+            </button>
+            {generated&&(
+              <button className="cat-btn cat-btn-out" onClick={exportPDF} disabled={exporting}>
+                {exporting ? '⏳' : '📥'} PDF
+              </button>
+            )}
           </div>
         </div>
 
@@ -2343,221 +2837,131 @@ div, section, header, footer, span, td, th, table {
           {generated&&(
             <div className="cat-outer" ref={outerRef}>
               <div ref={catRef} style={{
-                width:860,
-                background:'linear-gradient(160deg,#0e1823 0%,#080d14 60%,#0b1520 100%)',
-                borderRadius:20,overflow:'hidden',position:'relative',
-                fontFamily:"'Barlow',sans-serif",
-                border:'1px solid rgba(255,255,255,0.06)',
+                width:860, fontFamily:"'Barlow',sans-serif",
+                background:'#ffffff', borderRadius:16, overflow:'hidden',
+                boxShadow:'0 2px 40px rgba(0,0,0,0.12)'
               }}>
 
-                {/* ── DECORATIVE BACKGROUND LAYER ── */}
-                <div data-bg-layer="1" style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:0,overflow:'hidden',borderRadius:20}}>
-
-                  {/* Fine dot matrix */}
-                  <div style={{position:'absolute',inset:0,backgroundImage:'radial-gradient(circle,rgba(255,255,255,0.07) 1px,transparent 1px)',backgroundSize:'28px 28px'}}/>
-
-                  {/* Diagonal ruled lines */}
-                  <svg style={{position:'absolute',inset:0,width:'100%',height:'100%'}} preserveAspectRatio="none">
-                    <defs>
-                      <pattern id="diag" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
-                        <line x1="0" y1="0" x2="0" y2="60" stroke="rgba(255,255,255,0.025)" strokeWidth="1"/>
-                      </pattern>
-                      <pattern id="diag2" x="0" y="0" width="120" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
-                        <line x1="0" y1="0" x2="0" y2="120" stroke="rgba(232,184,75,0.045)" strokeWidth="1.5"/>
-                      </pattern>
-                    </defs>
-                    <rect width="100%" height="100%" fill="url(#diag)"/>
-                    <rect width="100%" height="100%" fill="url(#diag2)"/>
-                  </svg>
-
-                  {/* Corner brackets */}
-                  <svg style={{position:'absolute',top:14,left:14,opacity:.4}} width="60" height="60" viewBox="0 0 60 60" fill="none">
-                    <path d="M2 28 L2 2 L28 2" stroke="#E8B84B" strokeWidth="1.5" strokeLinecap="round"/>
-                    <circle cx="2" cy="2" r="2.5" fill="#E8B84B"/>
-                  </svg>
-                  <svg style={{position:'absolute',top:14,right:14,opacity:.4}} width="60" height="60" viewBox="0 0 60 60" fill="none">
-                    <path d="M58 28 L58 2 L32 2" stroke="#E8B84B" strokeWidth="1.5" strokeLinecap="round"/>
-                    <circle cx="58" cy="2" r="2.5" fill="#E8B84B"/>
-                  </svg>
-                  <svg style={{position:'absolute',bottom:14,left:14,opacity:.2}} width="60" height="60" viewBox="0 0 60 60" fill="none">
-                    <path d="M2 32 L2 58 L28 58" stroke="#E8B84B" strokeWidth="1.5" strokeLinecap="round"/>
-                    <circle cx="2" cy="58" r="2.5" fill="#E8B84B"/>
-                  </svg>
-                  <svg style={{position:'absolute',bottom:14,right:14,opacity:.2}} width="60" height="60" viewBox="0 0 60 60" fill="none">
-                    <path d="M58 32 L58 58 L32 58" stroke="#E8B84B" strokeWidth="1.5" strokeLinecap="round"/>
-                    <circle cx="58" cy="58" r="2.5" fill="#E8B84B"/>
-                  </svg>
-
-                  {/* Radial glows */}
-                  <div style={{position:'absolute',top:-80,left:'50%',transform:'translateX(-50%)',width:600,height:400,background:'radial-gradient(ellipse at center,rgba(232,184,75,0.08) 0%,transparent 65%)'}}/>
-                  <div style={{position:'absolute',bottom:-60,right:-60,width:320,height:320,background:'radial-gradient(ellipse at center,rgba(100,160,255,0.05) 0%,transparent 65%)'}}/>
-                  <div style={{position:'absolute',top:'42%',left:-40,width:220,height:220,background:'radial-gradient(ellipse at center,rgba(232,184,75,0.04) 0%,transparent 70%)'}}/>
-
-                  {/* Horizontal scan line */}
-                  <div style={{position:'absolute',top:'31%',left:0,right:0,height:1,background:'linear-gradient(90deg,transparent 0%,rgba(232,184,75,0.14) 20%,rgba(232,184,75,0.2) 50%,rgba(232,184,75,0.14) 80%,transparent 100%)'}}/>
-
-                  {/* Vertical inner rails */}
-                  <div style={{position:'absolute',top:0,left:28,width:1,height:'100%',background:'linear-gradient(180deg,transparent 0%,rgba(255,255,255,0.045) 15%,rgba(255,255,255,0.045) 85%,transparent 100%)'}}/>
-                  <div style={{position:'absolute',top:0,right:28,width:1,height:'100%',background:'linear-gradient(180deg,transparent 0%,rgba(255,255,255,0.045) 15%,rgba(255,255,255,0.045) 85%,transparent 100%)'}}/>
-
-                  {/* Circuit nodes */}
-                  {[{x:92,y:'18%'},{x:768,y:'22%'},{x:430,y:'67%'},{x:140,y:'74%'},{x:720,y:'71%'}].map((p,i)=>(
-                    <div key={i} style={{position:'absolute',left:p.x,top:p.y,width:5,height:5,borderRadius:'50%',border:'1px solid rgba(232,184,75,0.28)',background:'rgba(232,184,75,0.07)'}}/>
-                  ))}
-                  <svg style={{position:'absolute',inset:0,width:'100%',height:'100%',opacity:.12}} viewBox="0 0 860 800" preserveAspectRatio="none">
-                    <line x1="94" y1="144" x2="143" y2="592" stroke="#E8B84B" strokeWidth="0.6" strokeDasharray="3 7"/>
-                    <line x1="770" y1="176" x2="722" y2="568" stroke="#E8B84B" strokeWidth="0.6" strokeDasharray="3 7"/>
-                  </svg>
-
-                </div>
-
-                {/* ── ALL CONTENT (above bg layer) ── */}
-                <div style={{position:'relative',zIndex:1}}>
-
-                {/* TOP GOLD LINE */}
-                <div style={{height:2,background:'linear-gradient(90deg,transparent 0%,#C8922A 30%,#E8B84B 55%,#C8922A 75%,transparent 100%)'}}/>
+                {/* ── TOP BAR ── */}
+                <div style={{height:4,background:'linear-gradient(90deg,#1a1a1a 60%,#d36135 100%)'}}/>
 
                 {/* ── HEADER ── */}
-                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'18px 28px 16px',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
-                  {/* LOGO — uploaded image or text fallback */}
-                  {logoB64
-                    ? <img src={logoB64} style={{height:100,maxWidth:300,objectFit:'contain',display:'block'}}/>
-                    : <div>
-                        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,fontWeight:900,letterSpacing:'3.5px',color:'#fff',textTransform:'uppercase',lineHeight:1}}>
-                          EL WARCHA <span style={{color:'#E8B84B'}}>AUTO</span>
-                        </div>
-                        <div style={{fontSize:9,fontWeight:500,letterSpacing:'1.5px',color:'rgba(255,255,255,0.3)',marginTop:3,textTransform:'uppercase'}}>
-                          Importation Chine · Algérie
-                        </div>
-                      </div>
-                  }
-                  {/* FLAGS */}
-                  <div style={{display:'flex',gap:6,alignItems:'center'}}>
-                    <div style={{width:44,height:28,borderRadius:5,overflow:'hidden',border:'1px solid rgba(255,255,255,0.12)',flexShrink:0}}>
-                      <svg viewBox="0 0 44 28" style={{width:'100%',height:'100%'}}>
-                        <rect fill="#DE2910" width="44" height="28"/>
-                        <text x="2" y="14" fontSize="12" fill="#FFDE00" fontFamily="serif">★</text>
-                        <text x="13" y="7"  fontSize="6"  fill="#FFDE00" fontFamily="serif">★</text>
-                        <text x="17" y="12" fontSize="6"  fill="#FFDE00" fontFamily="serif">★</text>
-                        <text x="15" y="18" fontSize="6"  fill="#FFDE00" fontFamily="serif">★</text>
-                        <text x="11" y="23" fontSize="6"  fill="#FFDE00" fontFamily="serif">★</text>
-                      </svg>
-                    </div>
-                    <div style={{width:44,height:28,borderRadius:5,overflow:'hidden',border:'1px solid rgba(255,255,255,0.12)',flexShrink:0}}>
-                      <svg viewBox="0 0 44 28" style={{width:'100%',height:'100%'}}>
-                        <rect fill="#006233" width="22" height="28"/>
-                        <rect fill="white" x="22" width="22" height="28"/>
-                        <circle cx="23.5" cy="14" r="6.5" fill="#D21034"/>
-                        <circle cx="25.5" cy="14" r="5.2" fill="white"/>
-                        <path d="M31.0,10.5 L31.8,12.9 L34.3,12.9 L32.3,14.4 L33.1,16.8 L31.0,15.4 L28.9,16.8 L29.7,14.4 L27.7,12.9 L30.2,12.9 Z" fill="#D21034"/>
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ── HERO: vertical thumbs + main photo ── */}
-                <div style={{display:'flex',padding:'20px 24px',alignItems:'stretch',gap:10}}>
-
-                  {/* VERTICAL THUMBNAILS */}
-                  <div style={{display:'flex',flexDirection:'column',gap:8,width:104,flexShrink:0}}>
-                    {IMG_SLOTS.map(({key,lbl}) => imgs[key] ? (
-                      <div key={key} onClick={()=>setActiveThumb(key)}
-                        style={{
-                          height:96,borderRadius:10,overflow:'hidden',flexShrink:0,
-                          cursor:'pointer',position:'relative',
-                          border: activeThumb===key ? '2px solid #E8B84B' : '1px solid rgba(255,255,255,0.1)',
-                          opacity: activeThumb===key ? 1 : 0.6,
-                          transition:'all .15s',
-                        }}>
-                        <img src={imgs[key]} alt={lbl} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
-                        <div style={{position:'absolute',bottom:0,left:0,right:0,background:'linear-gradient(transparent,rgba(0,0,0,0.72))',fontSize:13,fontWeight:700,letterSpacing:1,textTransform:'uppercase',color:'rgba(255,255,255,0.75)',textAlign:'center',padding:'5px 3px'}}>{lbl}</div>
-                      </div>
-                    ) : null)}
-                  </div>
-
-                  {/* MAIN PHOTO */}
-                  <div style={{flex:1,borderRadius:14,overflow:'hidden',background:'linear-gradient(135deg,#111c2a,#0a1218)',minHeight:320,position:'relative',border:'1px solid rgba(255,255,255,0.07)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                    {/* grid bg */}
-                    <div style={{position:'absolute',inset:0,backgroundImage:'linear-gradient(rgba(255,255,255,0.015) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.01) 1px,transparent 1px)',backgroundSize:'44px 44px'}}/>
-                    {/* glow */}
-                    <div style={{position:'absolute',bottom:-30,left:'50%',transform:'translateX(-50%)',width:420,height:120,background:'radial-gradient(ellipse,rgba(232,184,75,0.07) 0%,transparent 70%)',pointerEvents:'none'}}/>
-                    {imgs[activeThumb]
-                      ? <img src={imgs[activeThumb]} alt="" style={{width:'100%',height:'100%',objectFit:'cover',position:'absolute',inset:0,display:'block'}}/>
-                      : <div style={{position:'relative',zIndex:2,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8}}>
-                          <CarSVG size={200}/>
-                          <div style={{fontSize:11,fontWeight:700,letterSpacing:2,textTransform:'uppercase',color:'rgba(255,255,255,0.12)'}}>Votre photo ici</div>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 24px',borderBottom:'1px solid #f0f0f0'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:12}}>
+                    {logoB64
+                      ? <img src={logoB64} style={{height:40,maxWidth:140,objectFit:'contain'}}/>
+                      : <div>
+                          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:16,fontWeight:900,letterSpacing:3,color:'#1a1a1a',textTransform:'uppercase',lineHeight:1}}>EL WARCHA <span style={{color:'#d36135'}}>AUTO</span></div>
+                          <div style={{fontSize:8,fontWeight:600,letterSpacing:2,color:'#aaa',textTransform:'uppercase',marginTop:2}}>Importation Chine · Algérie</div>
                         </div>
                     }
                   </div>
-                </div>
-
-                {/* ── MODEL NAME + PRICE BAND ── */}
-                <div style={{padding:'0 24px 20px',display:'flex',alignItems:'flex-end',justifyContent:'space-between',gap:20}}>
-                  <div>
-                    {form.make && <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:700,letterSpacing:4,color:'#E8B84B',opacity:.85,marginBottom:2,textTransform:'uppercase'}}>{form.make.toUpperCase()}</div>}
-                    <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:72,fontWeight:900,textTransform:'uppercase',color:'#fff',lineHeight:.88,letterSpacing:-2}}>{form.model.toUpperCase()||'MODÈLE'}</div>
-                    {(form.body||form.year) && <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,fontWeight:400,color:'rgba(255,255,255,0.32)',letterSpacing:3,marginTop:6,textTransform:'uppercase'}}>{[form.body,form.year?'Modèle '+form.year:''].filter(Boolean).join(' · ')}</div>}
-                  </div>
-                  {/* PRICE + STATUS stacked */}
-                  {form.price && (
-                    <div style={{textAlign:'right',flexShrink:0}}>
-                      {/* <div style={{fontSize:9,letterSpacing:2,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',marginBottom:6}}>Prix</div> */}
-                      {/* Price number — large gold hero text */}
-                      <div style={{position:'relative',display:'inline-block'}}>
-                        {/* glow behind price */}
-                        <div style={{position:'absolute',inset:-10,background:'radial-gradient(ellipse,rgba(232,184,75,0.18) 0%,transparent 70%)',pointerEvents:'none'}}/>
-                        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:900,lineHeight:1,letterSpacing:-1,position:'relative',display:'flex',alignItems:'flex-end',gap:6,justifyContent:'flex-end'}}>
-                          {/* Strip any trailing unit the stored string already has */}
-                          <span style={{fontSize:80,color:'#E8B84B',textShadow:'0 0 30px rgba(232,184,75,0.5)'}}>{form.price.replace(/\s*(DA|FOB)\s*$/i,'').trim()}</span>
-                          {/* Show unit: DA for DZD prices, FOB label for USD prices */}
-                          <span style={{fontSize:22,color:'rgba(232,184,75,0.7)',marginBottom:6,fontWeight:700,letterSpacing:1}}>
-                            {/FOB/i.test(form.price) ? 'USD FOB' : 'DA'}
-                          </span>
-                        </div>
+                  <div style={{display:'flex',alignItems:'center',gap:16}}>
+                    {form.status&&<div style={{fontSize:11,fontWeight:700,letterSpacing:1,textTransform:'uppercase',padding:'4px 12px',borderRadius:20,background:form.status==='Vendu'?'#fee2e2':form.status==='En stock'?'#dcfce7':'#fef3c7',color:form.status==='Vendu'?'#dc2626':form.status==='En stock'?'#16a34a':'#d97706'}}>{form.status}</div>}
+                    <div style={{display:'flex',gap:5}}>
+                      {/* China flag */}
+                      <div style={{width:36,height:22,borderRadius:3,overflow:'hidden',flexShrink:0,boxShadow:'0 1px 4px rgba(0,0,0,0.15)'}}>
+                        <svg viewBox="0 0 36 22" width="36" height="22"><rect fill="#DE2910" width="36" height="22"/><text x="1.5" y="11" fontSize="10" fill="#FFDE00" fontFamily="serif">★</text><text x="10" y="5.5" fontSize="4.5" fill="#FFDE00" fontFamily="serif">★</text><text x="13.5" y="9.5" fontSize="4.5" fill="#FFDE00" fontFamily="serif">★</text><text x="12" y="14.5" fontSize="4.5" fill="#FFDE00" fontFamily="serif">★</text><text x="8.5" y="18.5" fontSize="4.5" fill="#FFDE00" fontFamily="serif">★</text></svg>
                       </div>
-                      {form.status && (
-                        <div style={{marginTop:10,display:'inline-block',borderRadius:8,padding:'8px 18px',fontSize:20,fontWeight:800,color:'#E8B84B',letterSpacing:0,textTransform:'none',direction:'rtl',unicodeBidi:'plaintext'}}>{form.status}</div>
-                      )}
+                      {/* Algeria flag */}
+                      <div style={{width:36,height:22,borderRadius:3,overflow:'hidden',flexShrink:0,boxShadow:'0 1px 4px rgba(0,0,0,0.15)'}}>
+                        <svg viewBox="0 0 36 22" width="36" height="22">
+                          <rect fill="#006233" width="18" height="22"/>
+                          <rect fill="white" x="18" width="18" height="22"/>
+                          <circle cx="19.5" cy="11" r="5.2" fill="#D21034"/>
+                          <circle cx="21.2" cy="11" r="4.1" fill="white"/>
+                          <path d="M24.8,8.2 L25.4,10.1 L27.4,10.1 L25.8,11.3 L26.4,13.2 L24.8,12 L23.2,13.2 L23.8,11.3 L22.2,10.1 L24.2,10.1 Z" fill="#D21034"/>
+                        </svg>
+                      </div>
                     </div>
-                  )}
+                  </div>
                 </div>
 
-                {/* ── SPECS STRIP ── */}
-                {/* {stripItems.length>0 && (
-                  <div style={{background:'rgba(255,255,255,0.04)',borderTop:'1px solid rgba(255,255,255,0.07)',borderBottom:'1px solid rgba(255,255,255,0.07)',display:'flex',alignItems:'stretch',overflow:'hidden'}}>
-                    {stripItems.map((s,i)=>(
-                      <React.Fragment key={i}>
-                        {i>0 && <div style={{width:1,background:'rgba(255,255,255,0.06)',flexShrink:0}}/>}
-                        <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'16px 8px',gap:4,textAlign:'center'}}>
-                          <div style={{fontSize:9,letterSpacing:2,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',lineHeight:1}}>{s.lbl}</div>
-                          <div style={{fontSize:15,fontWeight:800,color:s.gold?'#E8B84B':'#fff',textTransform:'uppercase',letterSpacing:.5,lineHeight:1.2}}>{s.val}</div>
-                        </div>
-                      </React.Fragment>
-                    ))}
+                {/* ── MAIN BODY: left content + right photo strip ── */}
+                <div style={{display:'flex',minHeight:420}}>
+
+                  {/* ── LEFT: dark hero panel ── */}
+                  <div style={{flex:1,background:'linear-gradient(150deg,#111 0%,#1a1a1a 100%)',padding:'32px 32px 28px',display:'flex',flexDirection:'column',justifyContent:'space-between',position:'relative',overflow:'hidden'}}>
+                    {/* subtle grid */}
+                    <div style={{position:'absolute',inset:0,backgroundImage:'linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.015) 1px,transparent 1px)',backgroundSize:'40px 40px',pointerEvents:'none'}}/>
+                    {/* red accent bottom-right triangle */}
+                    <div style={{position:'absolute',bottom:0,right:0,width:0,height:0,borderStyle:'solid',borderWidth:'0 0 120px 120px',borderColor:'transparent transparent #d36135 transparent',opacity:.12,pointerEvents:'none'}}/>
+
+                    <div style={{position:'relative',zIndex:2}}>
+                      {/* Brand tag */}
+                      {form.make&&<div style={{fontSize:10,fontWeight:700,letterSpacing:5,textTransform:'uppercase',color:'#d36135',marginBottom:8}}>{form.make}</div>}
+                      {/* Model name */}
+                      <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:72,fontWeight:900,textTransform:'uppercase',color:'#fff',lineHeight:.88,letterSpacing:-1}}>{form.model||'MODÈLE'}</div>
+                      {/* Year + body */}
+                      {(form.year||form.body)&&<div style={{fontSize:13,fontWeight:500,color:'rgba(255,255,255,0.4)',marginTop:8,letterSpacing:2,textTransform:'uppercase'}}>{[form.year,form.body].filter(Boolean).join(' · ')}</div>}
+
+                      {/* Divider */}
+                      <div style={{width:48,height:2,background:'#d36135',margin:'20px 0'}}/>
+
+                      {/* Price */}
+                      {form.price&&<div>
+                        <div style={{fontSize:9,fontWeight:700,letterSpacing:3,textTransform:'uppercase',color:'rgba(255,255,255,0.3)',marginBottom:4}}>Prix</div>
+                        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:44,fontWeight:900,color:'#fff',lineHeight:1,letterSpacing:-1}}>{form.price}</div>
+                      </div>}
+                    </div>
+
+                    {/* Specs strip at bottom of dark panel */}
+                    {stripItems.length>0&&(
+                      <div style={{position:'relative',zIndex:2,display:'flex',gap:0,marginTop:24,borderTop:'1px solid rgba(255,255,255,0.08)',paddingTop:20}}>
+                        {stripItems.map((s,i)=>(
+                          <div key={i} style={{flex:1,textAlign:'center',borderRight:i<stripItems.length-1?'1px solid rgba(255,255,255,0.06)':'none',paddingRight:8,paddingLeft:i>0?8:0}}>
+                            <div style={{fontSize:9,fontWeight:700,letterSpacing:2,textTransform:'uppercase',color:'rgba(255,255,255,0.3)',marginBottom:3}}>{s.lbl}</div>
+                            <div style={{fontSize:12,fontWeight:800,color:s.gold?'#d36135':'#fff',textTransform:'uppercase'}}>{s.val}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )} */}
 
-                {/* ── BODY ── */}
-                {(specRows.length>0 || equips.size>0 || colors.size>0 || form.desc) && (
-                  <div style={{padding:'20px 24px 0'}}>
-                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginBottom:form.desc?14:0}}>
+                  {/* ── RIGHT: main photo + vertical thumbnail strip ── */}
+                  <div style={{width:320,flexShrink:0,display:'flex',flexDirection:'row',background:'#f5f5f5'}}>
+                    {/* Main photo */}
+                    <div style={{flex:1,background:'#f0f0f0',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',position:'relative'}}>
+                      {imgs.front
+                        ? <img src={imgs.front} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                        : <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,color:'#ccc'}}>
+                            <svg width="40" height="40" fill="none" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" stroke="#ccc" strokeWidth="1.5"/><circle cx="12" cy="12" r="4" stroke="#ccc" strokeWidth="1.5"/></svg>
+                            <span style={{fontSize:9,fontWeight:700,letterSpacing:2,textTransform:'uppercase'}}>Photo principale</span>
+                          </div>
+                      }
+                    </div>
+                    {/* Vertical thumbnail strip */}
+                    {Object.keys(imgs).filter(k=>k!=='front'&&imgs[k]).length>0&&(
+                      <div style={{width:72,flexShrink:0,display:'flex',flexDirection:'column',gap:2,background:'#e8e8e8',padding:2}}>
+                        {['rear','side-r','side-l','int1','int2'].filter(k=>imgs[k]).map(k=>(
+                          <div key={k} style={{flex:1,minHeight:60,overflow:'hidden',borderRadius:3,background:'#ddd'}}>
+                            <img src={imgs[k]} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
-                      {/* FICHE TECHNIQUE */}
-                      {specRows.length>0 && (
-                        <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:12,padding:'18px 20px',position:'relative',overflow:'hidden'}}>
-                          <div style={{position:'absolute',top:0,left:0,right:0,height:1,background:'linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent)'}}/>
-                          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,fontWeight:700,letterSpacing:3,textTransform:'uppercase',color:'#E8B84B',marginBottom:14,display:'flex',alignItems:'center',gap:8}}>
+                </div>
+
+                {/* ── BOTTOM SECTION: specs, equips, colors, desc ── */}
+                {(specRows.length>0||equips.size>0||colors.size>0||form.colorname||form.desc)&&(
+                  <div style={{background:'#fff',padding:'20px 24px',borderTop:'1px solid #f0f0f0'}}>
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
+
+                      {/* Fiche technique */}
+                      {specRows.length>0&&(
+                        <div>
+                          <div style={{fontSize:9,fontWeight:700,letterSpacing:3,textTransform:'uppercase',color:'#1a1a1a',marginBottom:10,display:'flex',alignItems:'center',gap:8}}>
                             Fiche technique
-                            <span style={{flex:1,height:1,background:'linear-gradient(90deg,rgba(232,184,75,0.3),transparent)',display:'block'}}/>
+                            <span style={{flex:1,height:1,background:'#e5e5e5',display:'block'}}/>
                           </div>
                           <table style={{width:'100%',borderCollapse:'collapse'}}>
                             <tbody>
                               {specRows.map(([k,v])=>(
-                                <tr key={k} style={{borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
-                                  <td style={{padding:'8px 0',fontSize:18,color:'rgba(255,255,255,0.38)',width:'45%',paddingRight:8}}>{k}</td>
-                                  <td style={{padding:'8px 0',fontSize:14,fontWeight:700,color:'rgba(255,255,255,0.9)',textAlign:'right'}}>
-                                    <span style={{background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:5,padding:'2px 10px',fontSize:17}}>{v}</span>
-                                  </td>
+                                <tr key={k} style={{borderBottom:'1px solid #f5f5f5'}}>
+                                  <td style={{padding:'5px 0',fontSize:11,color:'#999',width:'45%'}}>{k}</td>
+                                  <td style={{padding:'5px 0',fontSize:11,fontWeight:700,color:'#1a1a1a',textAlign:'right'}}>{v}</td>
                                 </tr>
                               ))}
                             </tbody>
@@ -2565,80 +2969,74 @@ div, section, header, footer, span, td, th, table {
                         </div>
                       )}
 
-                      {/* EQUIPEMENTS + COULEURS */}
-                      <div style={{display:'flex',flexDirection:'column',gap:14}}>
-                        {equips.size>0 && (
-                          <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:12,padding:'18px 20px',position:'relative',overflow:'hidden'}}>
-                            <div style={{position:'absolute',top:0,left:0,right:0,height:1,background:'linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent)'}}/>
-                            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,fontWeight:700,letterSpacing:3,textTransform:'uppercase',color:'#E8B84B',marginBottom:12}}>Équipements</div>
-                            <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                      {/* Right column: equips + colors + desc */}
+                      <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                        {equips.size>0&&(
+                          <div>
+                            <div style={{fontSize:9,fontWeight:700,letterSpacing:3,textTransform:'uppercase',color:'#1a1a1a',marginBottom:8,display:'flex',alignItems:'center',gap:8}}>
+                              Équipements<span style={{flex:1,height:1,background:'#e5e5e5',display:'block'}}/>
+                            </div>
+                            <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
                               {[...equips].map(key=>(
-                                <div key={key} style={{display:'flex',alignItems:'center',gap:5,background:'rgba(232,184,75,0.1)',border:'1px solid rgba(232,184,75,0.28)',borderRadius:20,padding:'6px 13px',fontSize:13,fontWeight:700,color:'#E8B84B'}}>
-                                  <div style={{width:5,height:5,borderRadius:'50%',background:'#E8B84B',flexShrink:0}}/>
+                                <div key={key} style={{fontSize:10,fontWeight:600,padding:'3px 9px',borderRadius:20,background:'#f5f5f5',border:'1px solid #e5e5e5',color:'#333'}}>
                                   {EQUIPMENT_LABELS[key]||key}
                                 </div>
                               ))}
                             </div>
                           </div>
                         )}
-                        {(colors.size>0||form.colorname) && (
-                          <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:12,padding:'18px 20px',position:'relative',overflow:'hidden'}}>
-                            <div style={{position:'absolute',top:0,left:0,right:0,height:1,background:'linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent)'}}/>
-                            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,fontWeight:700,letterSpacing:3,textTransform:'uppercase',color:'#E8B84B',marginBottom:12}}>Couleurs</div>
-                            <div style={{display:'flex',gap:10,flexWrap:'wrap',alignItems:'center'}}>
+                        {(colors.size>0||form.colorname)&&(
+                          <div>
+                            <div style={{fontSize:9,fontWeight:700,letterSpacing:3,textTransform:'uppercase',color:'#1a1a1a',marginBottom:8,display:'flex',alignItems:'center',gap:8}}>
+                              Couleurs<span style={{flex:1,height:1,background:'#e5e5e5',display:'block'}}/>
+                            </div>
+                            <div style={{display:'flex',gap:7,alignItems:'center',flexWrap:'wrap'}}>
                               {[...colors].map(c=>(
-                                <div key={c} style={{width:26,height:26,borderRadius:'50%',background:c,border:'2px solid rgba(255,255,255,0.2)',boxShadow:'0 2px 8px rgba(0,0,0,0.4)',flexShrink:0}}/>
+                                <div key={c} style={{width:22,height:22,borderRadius:'50%',background:c,border:'2px solid #e5e5e5',boxShadow:'0 1px 4px rgba(0,0,0,0.15)'}}/>
                               ))}
-                              {form.colorname && <div style={{fontSize:13,fontWeight:600,color:'rgba(255,255,255,0.55)',marginLeft:4}}>{form.colorname}</div>}
+                              {form.colorname&&<span style={{fontSize:11,color:'#777',fontWeight:500}}>{form.colorname}</span>}
                             </div>
                           </div>
                         )}
+                        {form.desc&&(
+                          <div>
+                            <div style={{fontSize:9,fontWeight:700,letterSpacing:3,textTransform:'uppercase',color:'#1a1a1a',marginBottom:8,display:'flex',alignItems:'center',gap:8}}>
+                              Description<span style={{flex:1,height:1,background:'#e5e5e5',display:'block'}}/>
+                            </div>
+                            <div style={{fontSize:11.5,color:'#666',lineHeight:1.7}}>{form.desc}</div>
+                          </div>
+                        )}
                       </div>
-                    </div>
 
-                    {/* DESCRIPTION */}
-                    {form.desc && (
-                      <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:12,padding:'18px 20px',marginBottom:0,position:'relative',overflow:'hidden'}}>
-                        <div style={{position:'absolute',top:0,left:0,right:0,height:1,background:'linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent)'}}/>
-                        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,fontWeight:700,letterSpacing:3,textTransform:'uppercase',color:'#E8B84B',marginBottom:12}}>Description</div>
-                        <div style={{fontSize:14,color:'rgba(255,255,255,0.5)',lineHeight:1.75}}>{form.desc}</div>
-                      </div>
-                    )}
+                    </div>
                   </div>
                 )}
 
                 {/* ── FOOTER ── */}
-                <div style={{background:'rgba(0,0,0,0.35)',borderTop:'1px solid rgba(255,255,255,0.06)',padding:'14px 28px',marginTop:20,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                  <div style={{display:'flex',alignItems:'center',gap:20}}>
-                    {form.fb && (
-                      <div style={{display:'flex',alignItems:'center',gap:8,fontSize:17,fontWeight:700,color:'rgba(255,255,255,0.8)'}}>
-                        <div style={{width:28,height:28,borderRadius:'50%',background:'#1877F2',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                          <svg width="13" height="13" fill="white" viewBox="0 0 16 16"><path d="M9.5 3H11V1H9C7.3 1 6 2.3 6 4V5H4V7H6V15H8.5V7H10.5L11 5H8.5V4C8.5 3.4 8.9 3 9.5 3Z"/></svg>
-                        </div>
-                        {form.fb}
+                <div style={{background:'#1a1a1a',padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                  <div style={{display:'flex',gap:20,alignItems:'center'}}>
+                    {form.phone&&<div style={{display:'flex',alignItems:'center',gap:7,color:'#fff',fontSize:12,fontWeight:600}}>
+                      <div style={{width:24,height:24,borderRadius:'50%',background:'#d36135',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                        <svg width="11" height="11" fill="none" viewBox="0 0 16 16"><path d="M3 2C3 2 2 2 2 3C2 4 2 7 5 10C8 13 11 14 12 14C13 14 13 13 13 13L14 11C14 10.5 13.5 10.2 11.5 9.2C11 9 10.8 9.1 10.5 9.4L10 10C10 10 9 9.5 8 8.5C7 7.5 6.5 6.5 6.5 6.5L7.1 5.9C7.4 5.6 7.5 5.4 7.3 4.9L6.3 3C6 2.5 5.5 2.5 5.5 2.5Z" stroke="white" strokeWidth="1.3" fill="none"/></svg>
                       </div>
-                    )}
-                    {form.ig && (
-                      <div style={{display:'flex',alignItems:'center',gap:8,fontSize:17,fontWeight:700,color:'rgba(255,255,255,0.8)'}}>
-                        <div style={{width:28,height:28,borderRadius:'50%',background:'radial-gradient(circle at 30% 107%,#fdf497,#fd5949 45%,#d6249f 60%,#285AEB)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                          <svg width="13" height="13" fill="none" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="3.5" stroke="white" strokeWidth="1.4"/><circle cx="8" cy="8" r="3" stroke="white" strokeWidth="1.4"/><circle cx="11.5" cy="4.5" r=".8" fill="white"/></svg>
-                        </div>
-                        {form.ig}
+                      {form.phone}
+                    </div>}
+                    {form.fb&&<div style={{display:'flex',alignItems:'center',gap:7,color:'rgba(255,255,255,0.7)',fontSize:12,fontWeight:600}}>
+                      <div style={{width:24,height:24,borderRadius:'50%',background:'#1877F2',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                        <svg width="11" height="11" fill="white" viewBox="0 0 16 16"><path d="M9.5 3H11V1H9C7.3 1 6 2.3 6 4V5H4V7H6V15H8.5V7H10.5L11 5H8.5V4C8.5 3.4 8.9 3 9.5 3Z"/></svg>
                       </div>
-                    )}
-                    {form.phone && (
-                      <div style={{display:'flex',alignItems:'center',gap:8,fontSize:17,fontWeight:700,color:'rgba(255,255,255,0.8)'}}>
-                        <div style={{width:28,height:28,borderRadius:'50%',background:'#E8B84B',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                          <svg width="13" height="13" fill="none" viewBox="0 0 16 16"><path d="M3 2C3 2 2 2 2 3C2 4 2 7 5 10C8 13 11 14 12 14C13 14 13 13 13 13L14 11C14 10.5 13.5 10.2 11.5 9.2C11 9 10.8 9.1 10.5 9.4L10 10C10 10 9 9.5 8 8.5C7 7.5 6.5 6.5 6.5 6.5L7.1 5.9C7.4 5.6 7.5 5.4 7.3 4.9L6.3 3C6 2.5 5.5 2.5 5.5 2.5Z" stroke="white" strokeWidth="1.3" fill="none"/></svg>
-                        </div>
-                        {form.phone}
+                      {form.fb}
+                    </div>}
+                    {form.ig&&<div style={{display:'flex',alignItems:'center',gap:7,color:'rgba(255,255,255,0.7)',fontSize:12,fontWeight:600}}>
+                      <div style={{width:24,height:24,borderRadius:'50%',background:'radial-gradient(circle at 30% 107%,#fdf497,#fd5949 45%,#d6249f 60%,#285AEB)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                        <svg width="11" height="11" fill="none" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="3.5" stroke="white" strokeWidth="1.4"/><circle cx="8" cy="8" r="3" stroke="white" strokeWidth="1.4"/><circle cx="11.5" cy="4.5" r=".8" fill="white"/></svg>
                       </div>
-                    )}
+                      {form.ig}
+                    </div>}
                   </div>
-                  <div style={{fontSize:9,letterSpacing:2,color:'rgba(255,255,255,0.15)',textTransform:'uppercase'}}>Import Chine · Algérie</div>
+                  <div style={{fontSize:8,fontWeight:700,letterSpacing:2,textTransform:'uppercase',color:'rgba(255,255,255,0.25)'}}>Import · Vente · Algérie</div>
                 </div>
 
-                </div>{/* end content wrapper */}
               </div>{/* end catRef */}
             </div>
           )}
@@ -2647,6 +3045,7 @@ div, section, header, footer, span, td, th, table {
     </>
   );
 };
+
 
 export default function App() {
   const [page,    setPage]    = useState("home");
@@ -2667,6 +3066,7 @@ export default function App() {
       try {
         const [c,d,s] = await Promise.all([getCars(), getDealers(), getSettings()]);
         setCars(c); setDealers(d); if (s) setSettings(s);
+        // Deep-link: search by car info params
         if (_hasDeepLink) {
           const found = c.find(x => {
             const matchBrand  = !_deepLink.brand  || x.brand === _deepLink.brand;
@@ -2685,8 +3085,12 @@ export default function App() {
     load();
   },[]);
 
+  // ── Cars ──
   const handleAddCar    = car  => setCars(prev=>[car, ...prev]);
-  const handleUpdateCar = updated => { setCars(prev=>prev.map(c=>c.id===updated.id ? updated : c)); setSelectedCar(updated); };
+  const handleUpdateCar = updated => {
+    setCars(prev=>prev.map(c=>c.id===updated.id ? updated : c));
+    setSelectedCar(updated);
+  };
   const handleDeleteCar = id => {
     if (!window.confirm("Supprimer ce véhicule ?")) return;
     deleteCar(id)
@@ -2694,8 +3098,12 @@ export default function App() {
       .catch(e=>showToast("Erreur: "+e.message,"error"));
   };
 
+  // ── Dealers ──
   const handleAddDealer    = d => setDealers(prev=>[d, ...prev]);
-  const handleUpdateDealer = updated => { setDealers(prev=>prev.map(d=>d.id===updated.id ? updated : d)); setSelectedDealer(updated); };
+  const handleUpdateDealer = updated => {
+    setDealers(prev=>prev.map(d=>d.id===updated.id ? updated : d));
+    setSelectedDealer(updated);
+  };
   const handleDeleteDealer = (id, goBack=false) => {
     if (!window.confirm("Supprimer ce concessionnaire ? Ses voitures ne seront pas supprimées.")) return;
     deleteDealer(id)
@@ -2710,15 +3118,25 @@ export default function App() {
       case "home":
         return <HomePage {...p} cars={cars} loading={loading} setSelectedCar={setSelectedCar} setCatalogueCar={setCatalogueCar} search={search} setSearch={setSearch}/>;
       case "car-detail":
-        return selectedCar ? <CarDetailPage {...p} car={selectedCar} dealers={dealers} onDelete={handleDeleteCar} onUpdate={handleUpdateCar}/> : null;
+        return selectedCar
+          ? <CarDetailPage {...p} car={selectedCar} dealers={dealers}
+              onDelete={handleDeleteCar} onUpdate={handleUpdateCar}/>
+          : null;
       case "dealers":
-        return <DealersPage {...p} dealers={dealers} cars={cars} loading={loading} setSelectedDealer={setSelectedDealer} onDeleteDealer={handleDeleteDealer}/>;
+        return <DealersPage {...p} dealers={dealers} cars={cars} loading={loading}
+          setSelectedDealer={setSelectedDealer} onDeleteDealer={handleDeleteDealer}/>;
       case "dealer-detail":
-        return selectedDealer ? <DealerDetailPage {...p} dealer={selectedDealer} cars={cars} setSelectedCar={setSelectedCar} setSelectedDealer={setSelectedDealer} onDeleteDealer={handleDeleteDealer} setCatalogueCar={setCatalogueCar}/> : null;
+        return selectedDealer
+          ? <DealerDetailPage {...p} dealer={selectedDealer} cars={cars}
+              setSelectedCar={setSelectedCar} setSelectedDealer={setSelectedDealer}
+              onDeleteDealer={handleDeleteDealer}/>
+          : null;
       case "add-dealer":
         return <AddDealerPage {...p} onAdd={handleAddDealer}/>;
       case "edit-dealer":
-        return selectedDealer ? <EditDealerPage {...p} dealer={selectedDealer} onUpdate={handleUpdateDealer}/> : null;
+        return selectedDealer
+          ? <EditDealerPage {...p} dealer={selectedDealer} onUpdate={handleUpdateDealer}/>
+          : null;
       case "add-car":
         return <AddCarPage {...p} dealers={dealers} onAdd={handleAddCar}/>;
       case "export":
