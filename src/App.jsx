@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { getDealers, getCars, getSettings, createDealer, updateDealer, deleteDealer, createCar, updateCar, updateSettings, deleteCar, uploadCarPhoto, getCatalogueTemplates, saveCatalogueTemplate, deleteCatalogueTemplate, uploadCatalogueAsset } from "./lib/db";
+import { StatsPage } from "./StatsPage";
 
 const EQUIPMENT_LABELS = {
   sun_roof:        "☀️ Sun Roof",
@@ -222,6 +223,7 @@ const BrandLogo = ({brand, size=28}) => {
 
 const NAV_ITEMS = [
   {id:"home",     icon:"🚗", l:"Voitures"},
+  {id:"stats", icon:"📊", l:"Statistiques"},
   {id:"dealers",  icon:"🏢", l:"Concessionnaires"},
   {id:"export",   icon:"📄", l:"Export PDF"},
   {id:"catalogue",icon:"🎨", l:"Catalogue"},
@@ -3149,6 +3151,9 @@ export default function App() {
         return <SettingsPage {...p} setSettings={setSettings}/>;
       default:
         return null;
+      case "stats":
+        return <StatsPage cars={cars} dealers={dealers} settings={settings}
+          setPage={setPage} setSelectedCar={setSelectedCar} setSelectedDealer={setSelectedDealer}/>;
     }
   };
 
