@@ -233,11 +233,23 @@ const EquipBar = ({ score, total = TOTAL_EQUIP, compact = false }) => {
 };
 
 // ── Price Comparison Panel (Enhanced) ────────────────────────
+const SORT_OPTIONS = [
+  { value: "dzd_asc",   label: "DZD ↑ moins cher",    icon: "💵" },
+  { value: "dzd_desc",  label: "DZD ↓ plus cher",     icon: "💵" },
+  { value: "usd_asc",   label: "USD ↑ moins cher",    icon: "💲" },
+  { value: "usd_desc",  label: "USD ↓ plus cher",     icon: "💲" },
+  { value: "equip_desc",label: "Équip. ↓ mieux équipé", icon: "⭐" },
+  { value: "equip_asc", label: "Équip. ↑ moins équipé", icon: "⭐" },
+  { value: "age_asc",   label: "Récent d'abord",       icon: "🕒" },
+  { value: "age_desc",  label: "Ancien d'abord",       icon: "🕒" },
+];
+
 const PriceComparison = ({ cars, settings, setPage, setSelectedCar }) => {
   const brands = [...new Set(cars.map(c => c.brand).filter(Boolean))].sort();
   const [selBrand, setSelBrand] = useState("");
   const [selModel, setSelModel] = useState("");
   const [showAvailOnly, setShowAvailOnly] = useState(false);
+  const [sortBy, setSortBy] = useState("dzd_asc");
 
   const models = selBrand
     ? [...new Set(cars.filter(c => c.brand === selBrand).map(c => c.model).filter(Boolean))].sort()
@@ -245,7 +257,7 @@ const PriceComparison = ({ cars, settings, setPage, setSelectedCar }) => {
 
   const matchingCars = useMemo(() => {
     if (!selBrand || !selModel) return [];
-    return cars
+    const mapped = cars
       .filter(c => {
         if (c.brand !== selBrand || c.model !== selModel) return false;
         if (showAvailOnly && c.status !== "available") return false;
@@ -259,16 +271,29 @@ const PriceComparison = ({ cars, settings, setPage, setSelectedCar }) => {
         const eq = equipScore(c);
         const days = daysAgo(c.created_at || c.inserted_at);
         return { ...c, _totalUSD: totalUSD, _dzd: dzd, _equip: eq, _days: days };
-      })
-      .sort((a, b) => (a._totalUSD || 0) - (b._totalUSD || 0));
-  }, [selBrand, selModel, cars, settings, showAvailOnly]);
+      });
+
+    return [...mapped].sort((a, b) => {
+      switch (sortBy) {
+        case "dzd_asc":    return (a._dzd || a._totalUSD || 0) - (b._dzd || b._totalUSD || 0);
+        case "dzd_desc":   return (b._dzd || b._totalUSD || 0) - (a._dzd || a._totalUSD || 0);
+        case "usd_asc":    return (a._totalUSD || 0) - (b._totalUSD || 0);
+        case "usd_desc":   return (b._totalUSD || 0) - (a._totalUSD || 0);
+        case "equip_desc": return b._equip - a._equip;
+        case "equip_asc":  return a._equip - b._equip;
+        case "age_asc":    return (a._days ?? 9999) - (b._days ?? 9999);
+        case "age_desc":   return (b._days ?? 0) - (a._days ?? 0);
+        default:           return 0;
+      }
+    });
+  }, [selBrand, selModel, cars, settings, showAvailOnly, sortBy]);
 
   return (
     <div style={{ background: "#fff", border: "1px solid #e5e5e5", borderRadius: 12, overflow: "hidden" }}>
       <SecHead title="COMPARAISON DE PRIX PAR MODÈLE" />
       <div style={{ padding: 16 }}>
         {/* Filters row */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 10, marginBottom: 14, alignItems: "end" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 10, marginBottom: 10, alignItems: "end" }}>
           <div>
             <label style={{ fontSize: 11, fontWeight: 700, color: "#9a9a9a", textTransform: "uppercase", letterSpacing: ".06em", display: "block", marginBottom: 4 }}>Marque</label>
             <select style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1.5px solid #ddd", fontSize: 13, outline: "none" }}
@@ -302,6 +327,26 @@ const PriceComparison = ({ cars, settings, setPage, setSelectedCar }) => {
           </div>
         </div>
 
+        {/* Sort row */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: "#9a9a9a", textTransform: "uppercase", letterSpacing: ".06em", whiteSpace: "nowrap" }}>
+            Trier par
+          </span>
+          {SORT_OPTIONS.map(opt => (
+            <button key={opt.value} onClick={() => setSortBy(opt.value)}
+              style={{
+                padding: "5px 11px", borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: "pointer",
+                border: `1.5px solid ${sortBy === opt.value ? "#d36135" : "#e5e5e5"}`,
+                background: sortBy === opt.value ? "#d36135" : "#fff",
+                color: sortBy === opt.value ? "#fff" : "#555",
+                transition: "all .12s",
+                whiteSpace: "nowrap",
+              }}>
+              {opt.icon} {opt.label}
+            </button>
+          ))}
+        </div>
+
         {!selBrand && (
           <div style={{ textAlign: "center", padding: "32px 0", color: "#ccc" }}>
             <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
@@ -318,22 +363,29 @@ const PriceComparison = ({ cars, settings, setPage, setSelectedCar }) => {
         {matchingCars.length > 0 && (
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9a9a", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 10 }}>
-              {matchingCars.length} résultat{matchingCars.length > 1 ? "s" : ""} — du moins cher au plus cher
+              {matchingCars.length} résultat{matchingCars.length > 1 ? "s" : ""} — trié par {SORT_OPTIONS.find(o => o.value === sortBy)?.label}
             </div>
 
             {matchingCars.map((car, i) => {
-              const isLowest  = i === 0 && matchingCars.length > 1;
-              const isHighest = i === matchingCars.length - 1 && matchingCars.length > 1;
+              const isFirst  = i === 0 && matchingCars.length > 1;
+              const isLast   = i === matchingCars.length - 1 && matchingCars.length > 1;
               const fob = parseFloat(car.price_fob) || 0;
               const ship = parseFloat(settings?.shipment_fee_usd) || 0;
               const ageBadge = stockAgeBadge(car._days);
+
+              // Label for first/last depends on current sort
+              const firstLabel = { dzd_asc: "MOINS CHER DZD", dzd_desc: "PLUS CHER DZD", usd_asc: "MOINS CHER USD", usd_desc: "PLUS CHER USD", equip_desc: "MIEUX ÉQUIPÉ", equip_asc: "MOINS ÉQUIPÉ", age_asc: "PLUS RÉCENT", age_desc: "PLUS ANCIEN" }[sortBy] || "PREMIER";
+              const lastLabel  = { dzd_asc: "PLUS CHER DZD",  dzd_desc: "MOINS CHER DZD", usd_asc: "PLUS CHER USD",  usd_desc: "MOINS CHER USD", equip_desc: "MOINS ÉQUIPÉ", equip_asc: "MIEUX ÉQUIPÉ", age_asc: "PLUS ANCIEN", age_desc: "PLUS RÉCENT" }[sortBy] || "DERNIER";
+              const firstColor = ["dzd_desc","usd_desc","equip_asc","age_desc"].includes(sortBy) ? "#dc2626" : "#16a34a";
+              const lastColor  = ["dzd_desc","usd_desc","equip_asc","age_desc"].includes(sortBy) ? "#16a34a" : "#dc2626";
 
               return (
                 <div key={car.id} onClick={() => { setSelectedCar(car); setPage("car-detail"); }}
                   style={{
                     display: "flex", alignItems: "flex-start", gap: 12, padding: "13px 14px",
-                    borderRadius: 9, border: `1.5px solid ${isLowest ? "#a7f3d0" : isHighest ? "#fecaca" : "#e5e5e5"}`,
-                    background: isLowest ? "#f0fdf4" : isHighest ? "#fff5f5" : "#fafafa",
+                    borderRadius: 9,
+                    border: `1.5px solid ${isFirst ? "#a7f3d0" : isLast ? "#fecaca" : "#e5e5e5"}`,
+                    background: isFirst ? "#f0fdf4" : isLast ? "#fff5f5" : "#fafafa",
                     marginBottom: 8, cursor: "pointer", transition: "box-shadow .15s",
                   }}
                   onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 3px 12px rgba(0,0,0,.1)"; }}
@@ -342,12 +394,12 @@ const PriceComparison = ({ cars, settings, setPage, setSelectedCar }) => {
                   {/* Rank */}
                   <div style={{
                     width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
-                    background: isLowest ? "#16a34a" : isHighest ? "#dc2626" : "#e5e5e5",
-                    color: isLowest || isHighest ? "#fff" : "#555",
+                    background: isFirst ? firstColor : isLast ? lastColor : "#e5e5e5",
+                    color: isFirst || isLast ? "#fff" : "#555",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 13,
                   }}>
-                    {isLowest ? "↓" : isHighest ? "↑" : i + 1}
+                    {isFirst ? "↑" : isLast ? "↓" : i + 1}
                   </div>
 
                   {/* Info */}
@@ -366,73 +418,67 @@ const PriceComparison = ({ cars, settings, setPage, setSelectedCar }) => {
                       {car.transmission && <span>{car.transmission}</span>}
                       {car.fuel_type && <span>{car.fuel_type}</span>}
                     </div>
-                    {/* Equipment score bar — NEW */}
                     <EquipBar score={car._equip} compact />
                   </div>
 
                   {/* Right: Price + badges */}
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
-                    {/* FOB breakdown — NEW */}
                     {fob > 0 && (
                       <div style={{ fontSize: 9, color: "#0369a1", fontWeight: 700 }}>
                         FOB ${fmt(fob)} + Ship ${fmt(ship)}
                       </div>
                     )}
-                    <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 20, color: isLowest ? "#16a34a" : isHighest ? "#dc2626" : "#d36135", lineHeight: 1 }}>
+                    <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 20, color: isFirst ? firstColor : isLast ? lastColor : "#d36135", lineHeight: 1 }}>
                       {car._totalUSD > 0 ? `$${fmt(Math.round(car._totalUSD))}` : "—"}
                     </div>
-                    {/* DZD price — NEW */}
                     {car._dzd && (
                       <div style={{ fontSize: 12, color: "#b45309", fontWeight: 800, background: "#fef3c7", padding: "2px 7px", borderRadius: 5 }}>
                         ≈ {fmt(car._dzd)} DZD
                       </div>
                     )}
                     <STag status={car.status} />
-                    {/* Age of listing — NEW */}
                     {ageBadge && (
                       <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 5, background: ageBadge.bg, color: ageBadge.color }}>
                         🕒 {ageBadge.label}
                       </span>
                     )}
-                    {isLowest && (
-                      <span style={{ background: "#16a34a", color: "#fff", fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 4 }}>MEILLEUR PRIX</span>
-                    )}
-                    {isHighest && matchingCars.length > 1 && (
-                      <span style={{ background: "#dc2626", color: "#fff", fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 4 }}>PLUS CHER</span>
-                    )}
+                    {isFirst && <span style={{ background: firstColor, color: "#fff", fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 4 }}>{firstLabel}</span>}
+                    {isLast  && <span style={{ background: lastColor,  color: "#fff", fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 4 }}>{lastLabel}</span>}
                   </div>
                 </div>
               );
             })}
 
-            {/* Price spread */}
-            {matchingCars.length > 1 && (
-              <div style={{ marginTop: 10, padding: "10px 14px", background: "#f8f8f8", borderRadius: 8, border: "1px solid #e5e5e5" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-                  <span style={{ color: "#9a9a9a", fontWeight: 600 }}>Écart de prix</span>
-                  <span style={{ fontWeight: 800, color: "#d36135" }}>
-                    ${fmt(Math.round(matchingCars[matchingCars.length - 1]._totalUSD - matchingCars[0]._totalUSD))}
-                  </span>
+            {/* Price spread — always based on USD regardless of current sort */}
+            {matchingCars.length > 1 && (() => {
+              const byUSD = [...matchingCars].sort((a, b) => (a._totalUSD || 0) - (b._totalUSD || 0));
+              const minUSD = byUSD[0]._totalUSD;
+              const maxUSD = byUSD[byUSD.length - 1]._totalUSD;
+              const spread = maxUSD - minUSD;
+              return (
+                <div style={{ marginTop: 10, padding: "10px 14px", background: "#f8f8f8", borderRadius: 8, border: "1px solid #e5e5e5" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                    <span style={{ color: "#9a9a9a", fontWeight: 600 }}>Écart de prix (USD)</span>
+                    <span style={{ fontWeight: 800, color: "#d36135" }}>${fmt(Math.round(spread))}</span>
+                  </div>
+                  <div style={{ marginTop: 8, position: "relative", height: 6, background: "#e5e5e5", borderRadius: 3 }}>
+                    {matchingCars.map((car) => {
+                      const range = spread || 1;
+                      const pct = ((car._totalUSD - minUSD) / range) * 100;
+                      return (
+                        <div key={car.id} title={`${car.dealers?.name || car.brand}: $${fmt(Math.round(car._totalUSD))}`} style={{
+                          position: "absolute", left: `${pct}%`, top: -3,
+                          width: 12, height: 12, borderRadius: "50%",
+                          background: car._totalUSD === minUSD ? "#16a34a" : car._totalUSD === maxUSD ? "#dc2626" : "#d36135",
+                          border: "2px solid #fff", transform: "translateX(-50%)", cursor: "pointer",
+                          boxShadow: "0 1px 4px rgba(0,0,0,.2)",
+                        }} />
+                      );
+                    })}
+                  </div>
                 </div>
-                <div style={{ marginTop: 8, position: "relative", height: 6, background: "#e5e5e5", borderRadius: 3 }}>
-                  {matchingCars.map((car, i) => {
-                    const min = matchingCars[0]._totalUSD;
-                    const max = matchingCars[matchingCars.length - 1]._totalUSD;
-                    const range = max - min || 1;
-                    const pct = ((car._totalUSD - min) / range) * 100;
-                    return (
-                      <div key={car.id} title={`${car.dealers?.name}: $${Math.round(car._totalUSD)}`} style={{
-                        position: "absolute", left: `${pct}%`, top: -3,
-                        width: 12, height: 12, borderRadius: "50%",
-                        background: i === 0 ? "#16a34a" : i === matchingCars.length - 1 ? "#dc2626" : "#d36135",
-                        border: "2px solid #fff", transform: "translateX(-50%)", cursor: "pointer",
-                        boxShadow: "0 1px 4px rgba(0,0,0,.2)",
-                      }} />
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
         )}
       </div>
